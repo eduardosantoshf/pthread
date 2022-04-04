@@ -49,33 +49,46 @@ int is_split(int char_value) {
 }
 
 // function that returns the next char in integer value
-int get_next_char(FILE *fp){
-    int bytes, ch = fgetc(fp);
-    //printf("%d \n", bytes);
-    //printf("%d \n \n", ch);
+int get_int(FILE *fp){
     
-    if(ch == -1) 
+    int ch_value = fgetc(fp);
+    int b = 0;
+    
+    // if EOF
+    if(ch_value == -1) 
         return -1;
 
-    if((ch & 0x80) == 0) 
-        return ch;
-
-    for (bytes = 1; ch & (0x80 >> bytes); bytes++){
-        ch = ch & (1 << (7 - bytes)) - 1;
+    // if is only 1 byte char, return it
+    if((ch_value & 128) == 0) {
+        return ch_value;
     }
 
-    for(; bytes > 1; bytes --){
+    // if contains 226 ('e2'), then it is a 3 byte char
+    if(ch_value == 226){
+        b = 3;
+        ch_value = ch_value & (1 << 4) - 1;
+    }
+    // else, is a 2 byte char
+    else{
+        b = 2;
+        ch_value = ch_value & (1 << 5) - 1;
+    }
 
-        int c = fgetc(fp);
+    // go through number of the char bytes
+    for(int x = 1; x < b; x ++){
 
-        if (c == -1) 
+        // get next byte
+        int next_ch_value = fgetc(fp);
+
+        // if EOF
+        if (next_ch_value == -1) 
             return -1;
-
-        ch = (ch << 6) | (c & 0x3F);
+        
+        // calculate int value of the char
+        ch_value = (ch_value << 6) | (next_ch_value & 63);
     }
 
-    return ch;
-
+    return ch_value;
 }
 
 
@@ -152,7 +165,7 @@ int main(int argc, char* argv[]){
 
         do{
             // next char value
-            int char_value = get_next_char(file);
+            int char_value = get_int(file);
             
             // check if first char of file is vowel
             if(flag == 0){
@@ -162,6 +175,7 @@ int main(int argc, char* argv[]){
                 flag = 1;
             }
 
+            // check if is a lonely apostrophe to avoid counting as word
             if(char_value == 39 || char_value == 8216 || char_value == 8217){
                 if(is_split(value_before)){
                     continue;
