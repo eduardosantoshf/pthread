@@ -1,6 +1,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <libgen.h> 
+#include <unistd.h>
+
+static void printUsage (char *cmdName);
 
 // function to check if it is a vowel
 int is_vowel(int char_value) {
@@ -43,7 +50,6 @@ int is_split(int char_value) {
 
 // function that returns the next char in integer value
 int get_next_char(FILE *fp){
-    
     int bytes, ch = fgetc(fp);
     //printf("%d \n", bytes);
     //printf("%d \n \n", ch);
@@ -74,7 +80,6 @@ int get_next_char(FILE *fp){
 
 
 int main(int argc, char* argv[]){
-
     int num_vowels = 0;
     int num_cons = 0;
     int total_num_words = 0;
@@ -85,11 +90,65 @@ int main(int argc, char* argv[]){
 
     int flag = 0;
 
+    double t0, t1, t2; /* time limits */
+    t2 = 0.0;
+
+    int opt;                  /* selected option */
+    char *fName = "no name";  /* file name (initialized to "no name" by default) */
+    int val = -1;             /* numeric value (initialized to -1 by default) */
+    opterr = 0;
+    do
+    { switch ((opt = getopt (argc, argv, "f:n:h"))) { 
+        case 'f': /* file name */
+                if (optarg[0] == '-')
+                    { fprintf (stderr, "%s: file name is missing\n", basename (argv[0]));
+                    printUsage (basename (argv[0]));
+                    return EXIT_FAILURE;
+                    }
+                    fName = optarg;
+                    break;
+        case 'n': /* numeric argument */
+                    if (atoi (optarg) <= 0)
+                    { fprintf (stderr, "%s: non positive number\n", basename (argv[0]));
+                        printUsage (basename (argv[0]));
+                        return EXIT_FAILURE;
+                    }
+                    val = (int) atoi (optarg);
+                    break;
+        case 'h': /* help mode */
+                    printUsage (basename (argv[0]));
+                    return EXIT_SUCCESS;
+        case '?': /* invalid option */
+                    fprintf (stderr, "%s: invalid option\n", basename (argv[0]));
+                printUsage (basename (argv[0]));
+                    return EXIT_FAILURE;
+        case -1:  break;
+        }
+    } while (opt != -1);
+
+    if (argc == 1){ 
+        fprintf (stderr, "%s: invalid format\n", basename (argv[0]));
+        printUsage (basename (argv[0]));
+        return EXIT_FAILURE;
+    }
+
+    int o; /* counting variable */
+
+    printf ("File name = %s\n", fName);
+    printf ("Numeric value = %d\n", val);
+
+    for (o = 0; o < argc; o++)
+        printf ("Word %d = %s\n", o, argv[o]);
+
+    printf("\n");
+
     // loop through the arguments
     for(int i = 1; i < argc; i++){
 
         // open file
-        FILE* file = fopen(argv[i], "r");
+        FILE* file = fopen(fName, "r");
+
+        t0 = ((double) clock ()) / CLOCKS_PER_SEC;
 
         do{
             // next char value
@@ -141,18 +200,18 @@ int main(int argc, char* argv[]){
             value_before = char_value;
             
         } while(!feof(file));
-        
 
-        
+        t1 = ((double) clock ()) / CLOCKS_PER_SEC;
+        t2 += t1 - t0;
+
+        // close file and reset counting variables
+        fclose(file);
 
         // print solutions
         printf("%s \n", argv[i]);
         printf("Number of words: %d \n", total_num_words);
         printf("Number of words starting with a vowel: %d \n", num_vowels);
         printf("Number of words ending with a consonant: %d \n\n", num_cons);
-
-        // close file and reset counting variables
-        fclose(file);
 
         num_vowels = 0;
         num_cons = 0;
@@ -166,8 +225,14 @@ int main(int argc, char* argv[]){
        
     }
 
-    
+    printf ("\nElapsed time = %.6f s\n", t2);
 
 }
 
-
+static void printUsage (char *cmdName) {
+  fprintf (stderr, "\nSynopsis: %s OPTIONS [filename / positive number]\n"
+           "  OPTIONS:\n"
+           "  -h      --- print this help\n"
+           "  -f      --- filename\n"
+           "  -n      --- positive number\n", cmdName);
+}
