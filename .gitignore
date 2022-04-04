@@ -264,3 +264,4 @@ xcuserdata/
 
 # End of https://www.toptal.com/developers/gitignore/api/clion,xcode,c,cmake,visualstudiocode,macos,linux
 problem2/computeDet_large
+.vscode
