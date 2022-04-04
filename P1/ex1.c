@@ -49,17 +49,10 @@ int is_split(int char_value) {
 }
 
 // function that returns the next char in integer value
-<<<<<<< HEAD
 int get_int(FILE *fp){
     
     int ch_value = fgetc(fp);
     int b = 0;
-=======
-int get_next_char(FILE *fp){
-    int bytes, ch = fgetc(fp);
-    //printf("%d \n", bytes);
-    //printf("%d \n \n", ch);
->>>>>>> 44722fdc47bb651c5240acdc7af76056cfca0ee4
     
     // if EOF
     if(ch_value == -1) 
