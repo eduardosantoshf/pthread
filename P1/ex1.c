@@ -143,10 +143,10 @@ int main(int argc, char* argv[]){
     printf("\n");
 
     // loop through the arguments
-    for(int i = 1; i < argc; i++){
+    for(int i = 2; i < argc; i++){
 
         // open file
-        FILE* file = fopen(fName, "r");
+        FILE* file = fopen(argv[i], "r");
 
         t0 = ((double) clock ()) / CLOCKS_PER_SEC;
 
