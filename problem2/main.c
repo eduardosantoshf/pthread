@@ -25,6 +25,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 #include "probConst.h"
 #include "sharedRegion.h"
 
@@ -102,8 +103,8 @@ int main(int argc, char * argv[]) {
     // will hold the output of processing the command
     int command_result;
 
-    double t0, t1, t2; /* time limits */
-    t2 = 0.0;
+    //double t0, t1, t2; /* time limits */
+    //t2 = 0.0;
 
     // process the command and act according to it
     command_result = process_command(argc, argv);
