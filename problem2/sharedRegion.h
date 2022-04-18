@@ -12,15 +12,19 @@
  *  \author Eduardo Santos and Pedro Bastos - April 2022
  */
 
-#ifndef SHARED_REGION_H
-#define SHARED_REGION_H
+#ifndef SHARED_REGION_H_
+#define SHARED_REGION_H_
 
-extern void presentFileNames (char* files[], unsigned int nFiles);
+void storeFileNames(int filesNumber, char * fileNames[]);
 
-extern void savePartialResults(struct CONTROLINFO *controlInfo);
+void openNextFile();
 
-extern int getPieceOfData(unsigned int workerId, struct CONTROLINFO *controlInfo);
+int calculateDet(int threadID, int fileID, int order);
 
-extern int printResults();
+void savePartialResults(int threadID, int fileID, int matrixNumber, double det);
 
-#endif /* SHARED_REGION_H */
+void storeResults();
+
+void checkProcessingResults();
+
+#endif /* SHARED_REGION_H_ */

@@ -18,6 +18,6 @@
 #define  N                                   2
 
 /** \brief number of matrices to be processed by each worker */
-#define  NUMBER_OF_MATRICES_TO_PROCESS       16
+#define  NUMBER_OF_M_TO_PROCESS          16
 
-#endif /* PROBCONST_H */
+#endif /* PROBCONST_H_ */

@@ -25,12 +25,20 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <string.h>
+#include "probConst.h"
+#include "sharedRegion.h"
 
 /** \brief process the called command. */
 static int process_command(int argc, char *argv[]);
 
 /** \brief Print the explanation of how to use the command. */
 static void printUsage (char *cmdName);
+
+/** \brief producer life cycle routine */
+static void *worker (void *id);
+
+/** \brief consumer threads return status array */
+int statusWorkers[N];
 
 /**
  * \brief Main method
@@ -41,6 +49,12 @@ static void printUsage (char *cmdName);
  * In the end, accesses the shared region to obtain the results and stores them in files.
  */
 int main(int argc, char * argv[]) {
+
+    // workers internal thread id array
+    pthread_t tIdWorker[N];
+    // workers application defined thread id array
+    unsigned int work[N];
+
     int i, j, k;
     // will hold the output of processing the command
     int command_result;
@@ -53,7 +67,7 @@ int main(int argc, char * argv[]) {
     if (command_result != EXIT_SUCCESS)
         return command_result;
 
-    printf("\n");
+    /*
 
     for (int counter = 2; counter < argc; counter++){
         
@@ -75,11 +89,11 @@ int main(int argc, char * argv[]) {
 
             t0 = ((double) clock ()) / CLOCKS_PER_SEC;
 
-            /* Here we are using Gauss Elimination
-            Technique for transforming matrix to
-            upper triangular matrix */
+            //Here we are using Gauss Elimination
+            //Technique for transforming matrix to
+            //upper triangular matrix
 
-            /* Applying Gauss Elimination */        
+            // Applying Gauss Elimination         
             for (i = 0; i < order; i++)
             {
                 if (matrix[i][i] == 0.0)
@@ -98,8 +112,8 @@ int main(int argc, char * argv[]) {
                 }
             }
 
-            /* Finding determinant by multiplying
-            elements in principal diagonal elements */
+            // Finding determinant by multiplying
+            // elements in principal diagonal elements 
             for (i = 0; i < order; i++)
             {
                 det = det * matrix[i][i];
@@ -117,8 +131,28 @@ int main(int argc, char * argv[]) {
 
         fclose(fp);
     }
+    */
+
+   // create worker threads
+    for (i = 0; i < N; i++)
+        if (pthread_create (&tIdWorker[i], NULL, worker, &work[i]) != 0){
+            perror ("error on creating worker thread");
+            exit (EXIT_FAILURE);
+        }
+
+    // waiting for the termination of the worker threads
+    printf ("\nFinal report\n");
+    for (i = 0; i < N; i++){
+        if (pthread_join (tIdWorker[i], (void *) &status_p) != 0){
+            perror ("error on waiting for worker thread");
+            exit (EXIT_FAILURE);
+        }
+        printf("Thread WORKER_%d finished it's life cycle with status %d\n", i, *status_p);
+    }
 
     printf ("\nElapsed time = %.6f s\n", t2);
+
+    //printResults();
 
     return 0;
 
