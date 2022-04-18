@@ -8,6 +8,7 @@
 static void printUsage (char *cmdName);
 
 int main(int argc, char * argv[]) {
+    FILE *fp;
     double determinant;
     int i, j, k;
 
@@ -63,81 +64,74 @@ int main(int argc, char * argv[]) {
 
     printf("\n");
 
-    for(int counter = 2; counter < argc; counter++){
-        
-        FILE *fp = fopen(argv[counter],"rb");  // r for read, b for binary
-        printf("Processing file %s\n\n", argv[counter]);
-        
-        int amount = 0;
-        fread(&amount, sizeof(int), 1, fp);
+    fp = fopen(fName,"rb");  // r for read, b for binary
 
-        int order = 0;
-        fread(&order, sizeof(int), 1, fp);
+    int amount = 0;
+    fread(&amount, sizeof(int), 1, fp);
 
-        double matrix[order][order];
-        int l = 0;
+    int order = 0;
+    fread(&order, sizeof(int), 1, fp);
 
-        while (fread(&matrix, sizeof(matrix), 1, fp)) {
-            double ratio;
-            double det = 1;
+    double matrix[order][order];
+    int l = 0;
 
-            t0 = ((double) clock ()) / CLOCKS_PER_SEC;
+    while (fread(&matrix, sizeof(matrix), 1, fp)) {
+        double ratio;
+        double det = 1;
 
-            /* Here we are using Gauss Elimination
-            Technique for transforming matrix to
-            upper triangular matrix */
+        t0 = ((double) clock ()) / CLOCKS_PER_SEC;
 
-            /* Applying Gauss Elimination */        
-            for (i = 0; i < order; i++)
+        /* Here we are using Gauss Elimination
+        Technique for transforming matrix to
+        upper triangular matrix */
+
+        /* Applying Gauss Elimination */        
+        for (i = 0; i < order; i++)
+        {
+            if (matrix[i][i] == 0.0)
             {
-                if (matrix[i][i] == 0.0)
-                {
-                    printf("Mathematical Error!");
-                    exit(0);
-                }
-                for (j = i + 1; j < order; j++)
-                {
-                    ratio = matrix[j][i] / matrix[i][i];
+                printf("Mathematical Error!");
+                exit(0);
+            }
+            for (j = i + 1; j < order; j++)
+            {
+                ratio = matrix[j][i] / matrix[i][i];
 
-                    for (k = 0; k < order; k++)
-                    {
-                            matrix[j][k] = matrix[j][k] - ratio * matrix[i][k];
-                    }
+                for (k = 0; k < order; k++)
+                {
+                        matrix[j][k] = matrix[j][k] - ratio * matrix[i][k];
                 }
             }
-            
-            /* Displaying upper triangular matrix */
-            /*
-            printf("\nUpper Triangular Matrix: \n");
-
-            for(i = 0; i < order; i++)
-            {
-                for(j = 0; j < order; j++)
-                {
-                    printf("%7.2f\t",matrix[i][j]);
-                }
-                printf("\n");
-            }
-            */
-
-            /* Finding determinant by multiplying
-            elements in principal diagonal elements */
-            for (i = 0; i < order; i++)
-            {
-                det = det * matrix[i][i];
-            }
-
-            printf("Processing matrix %d\n", l + 1);
-            printf("The determinant is %.3e \n", det);
-
-            t1 = ((double) clock ()) / CLOCKS_PER_SEC;
-            t2 += t1 - t0;
-            
-            l++;
         }
-        printf("\n");
+        
+        /* Displaying upper triangular matrix */
+        /*
+        printf("\nUpper Triangular Matrix: \n");
 
-        fclose(fp);
+        for(i = 0; i < order; i++)
+        {
+            for(j = 0; j < order; j++)
+            {
+                printf("%7.2f\t",matrix[i][j]);
+            }
+            printf("\n");
+        }
+        */
+
+        /* Finding determinant by multiplying
+        elements in principal diagonal elements */
+        for (i = 0; i < order; i++)
+        {
+            det = det * matrix[i][i];
+        }
+
+        printf("Processing matrix %d\n", l + 1);
+        printf("The determinant is %.3e \n", det);
+
+        t1 = ((double) clock ()) / CLOCKS_PER_SEC;
+        t2 += t1 - t0;
+        
+        l++;
     }
 
     printf ("\nElapsed time = %.6f s\n", t2);
