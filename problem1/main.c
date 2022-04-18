@@ -166,6 +166,7 @@ int main(int argc, char* argv[]){
         do{
             // next char value
             int char_value = get_int(file);
+            printf("%d \n", char_value);
             
             // check if first char of file is vowel
             if(flag == 0){

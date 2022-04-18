@@ -78,22 +78,22 @@ int main (void)
 
   /* waiting for the termination of the intervening entities threads */
 
-  printf ("\nFinal report\n");
+  //printf ("\nFinal report\n");
   for (i = 0; i < N; i++)
   { if (pthread_join (tIdProd[i], (void *) &status_p) != 0)                                       /* thread producer */
        { perror ("error on waiting for thread producer");
          exit (EXIT_FAILURE);
        }
-    printf ("thread producer, with id %u, has terminated: ", i);
-    printf ("its status was %d\n", *status_p);
+    //printf ("thread producer, with id %u, has terminated: ", i);
+    //printf ("its status was %d\n", *status_p);
   }
   for (i = 0; i < N; i++)
   { if (pthread_join (tIdCons[i], (void *) &status_p) != 0)                                       /* thread consumer */
        { perror ("error on waiting for thread customer");
          exit (EXIT_FAILURE);
        }
-    printf ("thread consumer, with id %u, has terminated: ", i);
-    printf ("its status was %d\n", *status_p);
+    //printf ("thread consumer, with id %u, has terminated: ", i);
+    ///printf ("its status was %d\n", *status_p);
   }
   t1 = ((double) clock ()) / CLOCKS_PER_SEC;
   printf ("\nElapsed time = %.6f s\n", t1 - t0);
@@ -113,11 +113,13 @@ static void *producer (void *par)
 {
   unsigned int id = *((unsigned int *) par),                                                          /* producer id */
                val;                                                                                /* produced value */
-  int i;                                                                                        /* counting variable */
+  int i;
+  
+  FILE* file = fopen("countWords/text0.txt", "r");                                                                                        /* counting variable */
 
   for (i = 0; i < M; i++)
   { val = 1000 * id + i;                                                                          /* produce a value */
-    putVal (id, val);                                                                               /* store a value */
+    putVal (id, val, file);                                                                               /* store a value */
     usleep((unsigned int) floor (40.0 * random () / RAND_MAX + 1.5));                           /* do something else */
   }
 
@@ -142,9 +144,12 @@ static void *consumer (void *par)
   for (i = 0; i < M; i++)
   { usleep((unsigned int) floor (40.0 * random () / RAND_MAX + 1.5));                           /* do something else */
     val = getVal (id);                                                                           /* retrieve a value */
-    printf ("The value %u was produced by the thread P%u and consumed by the thread C%u.\n",      /* consume a value */
-            val % 1000, val / 1000, id);
+    //printf ("The value %u was produced by the thread P%u and consumed by the thread C%u.\n",      /* consume a value */
+    //        val % 1000, val / 1000, id);
+    
+    //printf("%d \n\n", id);
   }
+  printf("%d \n", val);
 
   statusCons[id] = EXIT_SUCCESS;
   pthread_exit (&statusCons[id]);

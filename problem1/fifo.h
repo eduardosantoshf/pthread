@@ -28,7 +28,7 @@
  *  \param val value to be stored
  */
 
-extern void putVal (unsigned int prodId, unsigned int val);
+extern void putVal (unsigned int prodId, unsigned int val, FILE *f);
 
 /**
  *  \brief Get a value from the data transfer region.
