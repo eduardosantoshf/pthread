@@ -19,7 +19,7 @@ void storeFileNames(int filesNumber, char * fileNames[]);
 
 void openNextFile();
 
-int calculateDet(int threadID, int fileID, int order);
+int getVal(int threadID, int fileID, int order);
 
 void savePartialResults(int threadID, int fileID, int matrixNumber, double det);
 

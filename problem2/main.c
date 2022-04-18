@@ -34,11 +34,52 @@ static int process_command(int argc, char *argv[]);
 /** \brief Print the explanation of how to use the command. */
 static void printUsage (char *cmdName);
 
-/** \brief producer life cycle routine */
-static void *worker (void *id);
+int *statusWorker;
 
-/** \brief consumer threads return status array */
-int statusWorkers[N];
+/** \brief producer life cycle routine */
+static void *work (int tid);
+
+
+
+double computeDet(int order, double **matrix) {
+    double ratio;
+    double det = 1;
+    int i, j, k;
+
+    //t0 = ((double) clock ()) / CLOCKS_PER_SEC;
+
+    //Here we are using Gauss Elimination
+    //Technique for transforming matrix to
+    //upper triangular matrix
+
+    // Applying Gauss Elimination         
+    for (i = 0; i < order; i++)
+    {
+        if (matrix[i][i] == 0.0)
+        {
+            printf("Mathematical Error!");
+            exit(0);
+        }
+        for (j = i + 1; j < order; j++)
+        {
+            ratio = matrix[j][i] / matrix[i][i];
+
+            for (k = 0; k < order; k++)
+            {
+                    matrix[j][k] = matrix[j][k] - ratio * matrix[i][k];
+            }
+        }
+    }
+
+    // Finding determinant by multiplying
+    // elements in principal diagonal elements 
+    for (i = 0; i < order; i++)
+    {
+        det = det * matrix[i][i];
+    }
+
+    return det;
+}
 
 /**
  * \brief Main method
@@ -49,13 +90,15 @@ int statusWorkers[N];
  * In the end, accesses the shared region to obtain the results and stores them in files.
  */
 int main(int argc, char * argv[]) {
+    char *files[10]; 
+    int threads = 0;
 
     // workers internal thread id array
     pthread_t tIdWorker[N];
     // workers application defined thread id array
     unsigned int work[N];
 
-    int i, j, k;
+    //int i, j, k;
     // will hold the output of processing the command
     int command_result;
 
@@ -133,26 +176,46 @@ int main(int argc, char * argv[]) {
     }
     */
 
-   // create worker threads
-    for (i = 0; i < N; i++)
-        if (pthread_create (&tIdWorker[i], NULL, worker, &work[i]) != 0){
-            perror ("error on creating worker thread");
-            exit (EXIT_FAILURE);
-        }
+    for (int b = 2; b < argc; b++)
+        files[b] = argv[b];
 
-    // waiting for the termination of the worker threads
-    printf ("\nFinal report\n");
-    for (i = 0; i < N; i++){
-        if (pthread_join (tIdWorker[i], (void *) &status_p) != 0){
-            perror ("error on waiting for worker thread");
+    statusWorker = malloc(sizeof(int)*threads);
+
+    pthread_t tIdworker[threads];
+    unsigned int workers[threads];
+    int *status_p;                                                                      /* pointer to execution status */
+
+    for (int t = 0; t < threads; t++)
+        workers[t] = t;
+
+    storeFileNames(argc - 2, files);
+
+    //---------------THREADS
+    for (int t = 0; t < threads; t++){
+        //create(t)
+        if (pthread_create (&tIdworker[t], NULL, work, workers[t]) != 0)                              /* thread producer */
+        { 
+            perror ("error on creating thread worker");
             exit (EXIT_FAILURE);
         }
-        printf("Thread WORKER_%d finished it's life cycle with status %d\n", i, *status_p);
+    }
+    for (int t = 0; t < threads; t++){
+        if (pthread_join (tIdworker[t], (void *) &status_p) != 0)                                       /* thread producer */
+        { 
+            perror ("error on waiting for thread worker");
+            exit (EXIT_FAILURE);
+        }
+        
+        printf ("thread worker, with id %d, has terminated: ", t);
+        printf ("its status was %d\n", *status_p);
     }
 
-    printf ("\nElapsed time = %.6f s\n", t2);
+    // If the partialInfo class is not empty, store the results in the given file
+    storeResults();
+    checkProcessingResults();
 
-    //printResults();
+    //t1 = ((double) clock ()) / CLOCKS_PER_SEC;
+    //printf ("\nElapsed time = %.6f s\n", t1 - t0);
 
     return 0;
 
@@ -165,10 +228,20 @@ int main(int argc, char * argv[]) {
  *
  *  \param par pointer to application defined worker identification
  */
-static void *worker (void *par) {
-    unsigned int id = *((unsigned int *) par); /* worker id */
+static void *worker (int tid) {
+    int id = tid;
+    printf("Thread %d created \n", id);
+    double ** matrix;
+    int order;
 
     double det; /* will hold the value of a determinant */
+
+    while (getVal(id, &fileId, &order, &matrix) != 2) {
+        det = computeDet(order, matrix);
+    }
+
+    statusWorker[id] = EXIT_SUCCESS;
+    pthread_exit (&statusWorker[id]);
 
     // TODO: calculate determinants
 }
