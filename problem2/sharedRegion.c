@@ -17,9 +17,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include "probConst.h"
-
-/** \brief number of file that will be processed */
-int numFiles;
+#include "PartialInfo.h"
 
 /** \brief worker status */
 extern int *statusWorker;
@@ -88,11 +86,10 @@ int getVal(int threadId, int* fileId, int order, double ** matrix) {
         statusWorker[threadId] = EXIT_FAILURE;
         pthread_exit (&statusWorker[threadId]);
     }
-    //printf("THREAD %d acquired lock on ProcessConvPoint\n", threadId);
-    //printf("SingalSize = %d \t currIndex = %d\n", finalInfo[currFile].signal_size, currIndex);
+    
 
     // This condition means we have reached the end of the file, so the next point we want to process is
-    if (finalInfo[currFile].signal_size == currIndex) {
+    if (finalInfo[currFile].order == currIndex) {
         currFile++;
         openNextFile();
     }
@@ -104,7 +101,7 @@ int getVal(int threadId, int* fileId, int order, double ** matrix) {
         // Writing to the variables we need to
         *fileId = currFile;
         order = finalInfo[currFile].order;
-        **matrix = finalInfo[currFile].matrix;
+        matrix = finalInfo[currFile].matrix;
         currIndex++;
         status = 0;
 

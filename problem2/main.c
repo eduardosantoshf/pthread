@@ -38,7 +38,7 @@ static void printUsage (char *cmdName);
 int *statusWorker;
 
 /** \brief producer life cycle routine */
-static void *work (int tid);
+static void *worker (void *par);
 
 
 
@@ -92,12 +92,7 @@ double computeDet(int order, double **matrix) {
  */
 int main(int argc, char * argv[]) {
     char *files[10]; 
-    int threads = 0;
-
-    // workers internal thread id array
-    pthread_t tIdWorker[N];
-    // workers application defined thread id array
-    unsigned int work[N];
+    int threads = 2; //TODO: make tthis value non-hardcoded
 
     //int i, j, k;
     // will hold the output of processing the command
@@ -110,72 +105,6 @@ int main(int argc, char * argv[]) {
     command_result = process_command(argc, argv);
     if (command_result != EXIT_SUCCESS)
         return command_result;
-
-    /*
-
-    for (int counter = 2; counter < argc; counter++){
-        
-        FILE *fp = fopen(argv[counter],"rb");  // r for read, b for binary
-        printf("Processing file %s\n\n", argv[counter]);
-        
-        int amount = 0;
-        fread(&amount, sizeof(int), 1, fp);
-
-        int order = 0;
-        fread(&order, sizeof(int), 1, fp);
-
-        double matrix[order][order];
-        int l = 0;
-
-        while (fread(&matrix, sizeof(matrix), 1, fp)) {
-            double ratio;
-            double det = 1;
-
-            t0 = ((double) clock ()) / CLOCKS_PER_SEC;
-
-            //Here we are using Gauss Elimination
-            //Technique for transforming matrix to
-            //upper triangular matrix
-
-            // Applying Gauss Elimination         
-            for (i = 0; i < order; i++)
-            {
-                if (matrix[i][i] == 0.0)
-                {
-                    printf("Mathematical Error!");
-                    exit(0);
-                }
-                for (j = i + 1; j < order; j++)
-                {
-                    ratio = matrix[j][i] / matrix[i][i];
-
-                    for (k = 0; k < order; k++)
-                    {
-                            matrix[j][k] = matrix[j][k] - ratio * matrix[i][k];
-                    }
-                }
-            }
-
-            // Finding determinant by multiplying
-            // elements in principal diagonal elements 
-            for (i = 0; i < order; i++)
-            {
-                det = det * matrix[i][i];
-            }
-
-            printf("Processing matrix %d\n", l + 1);
-            printf("The determinant is %.3e \n", det);
-
-            t1 = ((double) clock ()) / CLOCKS_PER_SEC;
-            t2 += t1 - t0;
-            
-            l++;
-        }
-        printf("\n");
-
-        fclose(fp);
-    }
-    */
 
     for (int b = 2; b < argc; b++)
         files[b] = argv[b];
@@ -194,7 +123,7 @@ int main(int argc, char * argv[]) {
     //---------------THREADS
     for (int t = 0; t < threads; t++){
         //create(t)
-        if (pthread_create (&tIdworker[t], NULL, work, workers[t]) != 0)                              /* thread producer */
+        if (pthread_create (&tIdworker[t], NULL, worker, &workers[t]) != 0)                              /* thread producer */
         { 
             perror ("error on creating thread worker");
             exit (EXIT_FAILURE);
@@ -212,8 +141,8 @@ int main(int argc, char * argv[]) {
     }
 
     // If the partialInfo class is not empty, store the results in the given file
-    storeResults();
-    checkProcessingResults();
+    //storeResults();
+    //checkProcessingResults();
 
     //t1 = ((double) clock ()) / CLOCKS_PER_SEC;
     //printf ("\nElapsed time = %.6f s\n", t1 - t0);
@@ -229,22 +158,26 @@ int main(int argc, char * argv[]) {
  *
  *  \param par pointer to application defined worker identification
  */
-static void *worker (int tid) {
-    int id = tid;
+static void *worker (void *par) {
+    //int id = tid;
+    unsigned int id = *((unsigned int *) par);
+
     printf("Thread %d created \n", id);
-    double ** matrix;
-    int order;
 
-    double det; /* will hold the value of a determinant */
+    //double ** matrix;
+    //int order, fileID;
 
-    while (getVal(id, &fileId, &order, &matrix) != 2) {
+    //double det; /* will hold the value of a determinant */
+    /*
+    while (getVal(id, &fileID, &order, &matrix) != 2) {
         det = computeDet(order, matrix);
+        //TODO: save partial results
     }
+    */
+   printf("entrou");
 
     statusWorker[id] = EXIT_SUCCESS;
     pthread_exit (&statusWorker[id]);
-
-    // TODO: calculate determinants
 }
 
 
