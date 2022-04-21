@@ -28,14 +28,18 @@
 
 
 /** \brief consumer threads return status array */
-extern int statusCons[N + 1];
+extern int statusCons[N];
 
 
 //static unsigned int char_values[K];
 extern FILE* fp;
 extern char **filenames;
 
-int num_bytes = 1;
+extern int *array_num_words;
+extern int *array_num_vowels;
+extern int *array_num_cons;
+
+int num_bytes = 10;
 
 int ready_read = 0;
 
@@ -75,6 +79,7 @@ int total_num_words = 1;
 int value_before = 0;
 int end_of_word = 0;
 int flag = 0;
+int partial_results = 0;
 
 extern int num_files;
 
@@ -124,12 +129,13 @@ int file_available(unsigned int id){
   if(files_idx < num_files){
       //printf("%d %d \n", files_idx, num_files);
     if(!file_opened){
+      //partial_results = 0;
       file_opened = 1;
       file_closed = 0;
       done_reading = 0;
       //printf("%d \n", files_idx);
       fp = fopen(filenames[files_idx], "r");
-      printf("file opened: %s \n", filenames[files_idx]);
+      //printf("file opened: %s \n", filenames[files_idx]);
 
       if(fp == NULL){
         printf("Can't open file %s\n", filenames[files_idx]);
@@ -190,7 +196,7 @@ void closeFile(unsigned int id){
     //printf("ola");
 
     if (!file_closed) {
-        printf("file num %d closed. \n", files_idx);
+        //printf("file num %d closed. \n", files_idx);
         fclose(fp);
         files_idx++;
         file_opened = 0;
@@ -199,6 +205,8 @@ void closeFile(unsigned int id){
         total_num_words = 0;
         num_vowels = 0;
         num_cons = 0;
+        partial_results = 0;
+
     }
 
     if ((statusCons[id] = pthread_cond_signal(&close_fi)) != 0) {                          /* */
@@ -324,6 +332,8 @@ int is_split(int char_value) {
 //  pthread_cond_init (&fifoFull, NULL);                                 /* initialize producers synchronization point */
 //  pthread_cond_init (&fifoEmpty, NULL);                                /* initialize consumers synchronization point */
 //}
+
+
 
 /**
  *  \brief Get a value from the data transfer region.
@@ -456,4 +466,44 @@ unsigned int getVal (unsigned int consId)
   return 1;
 }
 
+void write_file_results(consId){
+    if ((statusCons[consId] = pthread_mutex_lock (&vars_access)) != 0)                                   /* enter monitor */
+     { errno = statusCons[consId];                                                            /* save error in errno */
+       perror ("error on entering monitor(CF)");
+       statusCons[consId] = EXIT_FAILURE;
+       pthread_exit (&statusCons[consId]);
+     }
+     
+
+     if(!partial_results){
+        //printf("%d \n", array_num_words[4]);
+        //printf("%d \n", files_idx);
+        array_num_words[files_idx] = total_num_words;
+        array_num_vowels[files_idx] = num_vowels;
+        array_num_cons[files_idx] = num_cons;
+        //printf("%d \n", files_idx);
+        //printf("%d \n \n", array_num_words[4]);
+        partial_results = 1;
+     }
+
+
+    if ((statusCons[consId] = pthread_mutex_unlock (&vars_access)) != 0)                                   /* exit monitor */
+     { errno = statusCons[consId];                                                             /* save error in errno */
+       perror ("error on exiting monitor(CF)");
+       statusCons[consId] = EXIT_FAILURE;
+       pthread_exit (&statusCons[consId]);
+     }
+
+}
+
+
+void writeFinal() {
+    for(int i = 0; i < num_files; i++){ 
+      printf("File name: %s \n", filenames[i]);
+      printf("num words: %d \n", array_num_words[i]);
+      printf("num vowels: %d \n", array_num_vowels[i]);
+      printf("num cons: %d \n", array_num_cons[i]);
+    }
+    
+}
 

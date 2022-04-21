@@ -37,4 +37,8 @@ extern void closeFile(unsigned int id);
 
 extern unsigned int getVal (unsigned int consId);
 
+extern void writeFinal();
+
+extern void write_file_results(unsigned int consId);
+
 #endif /* FIFO_H */

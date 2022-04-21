@@ -30,11 +30,15 @@
 
 FILE *fp;
 int num_files;
-extern int total_num_words;
+int *array_num_words;
+int *array_num_vowels;
+int *array_num_cons;
+//extern int num_vowels;
+//extern int num_cons;
 
 
 /** \brief consumer threads return status array */
-int statusCons[N + 1];
+int statusCons[N];
 
 
 /** \brief consumer life cycle routine */
@@ -115,11 +119,15 @@ int main (int argc, char* argv[])
     }
 
     num_files = argc - 2;
+    //printf("%d \n", num_files);
+    array_num_words = (int *)malloc(num_files * sizeof(int));
+    array_num_vowels = (int *)malloc(num_files * sizeof(int));
+    array_num_cons = (int *)malloc(num_files * sizeof(int));
 
 
   double t0, t1;
   
-  statusCons[N] = EXIT_SUCCESS;                                                                                      /* time limits */
+  //statusCons[N] = EXIT_SUCCESS;                                                                                      /* time limits */
 
   for (i = 0; i < N; i++)
     cons[i] = i;
@@ -144,6 +152,9 @@ int main (int argc, char* argv[])
   }
 
   t1 = ((double) clock ()) / CLOCKS_PER_SEC;
+
+  writeFinal();
+
   printf ("\nElapsed time = %.6f s\n", t1 - t0);
 
   exit (EXIT_SUCCESS);
@@ -194,9 +205,11 @@ static void *consumer(void *par) {
     //printf("worker if %d with last char %d \n", id, value_val);
     //printf("%d \n", file_available(id));
     //printf("Worker id: %d \n", id);
-    printf("nom words: %d \n", total_num_words);
+    
     usleep((unsigned int) floor(40.0 * random() / RAND_MAX + 1.5));
+    write_file_results(id);
     closeFile(id);
+    
     
   }
   //printf("ola");
