@@ -29,16 +29,22 @@
 #include "fifo.h"
 
 FILE *fp;
-int num_files;
-extern int total_num_words;
+int size_of_filenames;
+int num_of_bytes;
 
 
 /** \brief consumer threads return status array */
-int statusCons[N + 1];
+int statusProd[N];
+int statusCons[N];
 
+/** \brief producer life cycle routine */
+static void *producer (void *id);
 
 /** \brief consumer life cycle routine */
 static void *consumer (void *id);
+
+char **filenames;
+
 
 static void printUsage (char *cmdName) {
   fprintf (stderr, "\nSynopsis: %s OPTIONS [filename / positive number]\n"
@@ -48,7 +54,66 @@ static void printUsage (char *cmdName) {
            "  -n      --- positive number\n", cmdName);
 }
 
-char **filenames;
+
+
+static int processCommandLine(int argc, char *argv[]){
+
+  int opt;                  /* selected option */
+  char *fName = "no name";  /* file name (initialized to "no name" by default) */
+  int value_opt = -1;             /* numeric value (initialized to -1 by default) */
+
+  /* Process command line optios */
+  do
+    { 
+      switch ((opt = getopt (argc, argv, "f:n:h"))) { 
+
+        case 'f': /* file name */
+                if (optarg[0] == '-')
+                    { fprintf (stderr, "%s: file name is missing\n", basename (argv[0]));
+                    printUsage (basename (argv[0]));
+                    return EXIT_FAILURE;
+                    }
+                    fName = optarg;
+                    break;
+
+        case 'n': /* numeric argument */
+                    if (atoi (optarg) <= 0)
+                    { fprintf (stderr, "%s: non positive number\n", basename (argv[0]));
+                        printUsage (basename (argv[0]));
+                        return EXIT_FAILURE;
+                    }
+                    value_opt = (int) atoi (optarg);
+                    break;
+
+        case 'h': /* help mode */
+                    printUsage (basename (argv[0]));
+                    return EXIT_SUCCESS;
+
+        case '?': /* invalid option */
+                    fprintf (stderr, "%s: invalid option\n", basename (argv[0]));
+                printUsage (basename (argv[0]));
+                    return EXIT_FAILURE;
+                  /* break switch */  
+        case -1:  break;
+        }
+    } while (opt != -1);
+
+    if (argc == 1){ 
+        fprintf (stderr, "%s: invalid format\n", basename (argv[0]));
+        printUsage (basename (argv[0]));
+        return EXIT_FAILURE;
+    }
+    
+    /* Store filenames in array */
+    for(int i = 2; i < argc; i++){
+      filenames[i - 2] = argv[i]; 
+    }
+
+    size_of_filenames = argc - 2;
+
+    return EXIT_SUCCESS;
+
+}
 
 
 /**
@@ -59,8 +124,13 @@ char **filenames;
  */
 int main (int argc, char* argv[])
 {
-  pthread_t tIdCons[N];                                                        /* producers internal thread id array */                                                        /* consumers internal thread id array */
-  unsigned int cons[N];                                            /* producers application defined thread id array */
+
+  printf("ola");
+  pthread_t tIdProd[N],                                                        /* producers internal thread id array */
+            tIdCons[N];                                                        /* consumers internal thread id array */
+  unsigned int prod[N],                                             /* producers application defined thread id array */
+               cons[N];                                           /* producers application defined thread id array */
+
   filenames = malloc((argc - 1) * sizeof(char*));
                                                             /* consumers application defined thread id array */
   int i;                                                                                        /* counting variable */
@@ -69,57 +139,22 @@ int main (int argc, char* argv[])
   /* initializing the application defined thread id arrays for the producers and the consumers and the random number
      generator */
 
-  int opt;                  /* selected option */
-  char *fName = "no name";  /* file name (initialized to "no name" by default) */
-  int value_opt = -1;             /* numeric value (initialized to -1 by default) */
-  opterr = 0;
+  
 
-  do
-    { switch ((opt = getopt (argc, argv, "f:n:h"))) { 
-        case 'f': /* file name */
-                if (optarg[0] == '-')
-                    { fprintf (stderr, "%s: file name is missing\n", basename (argv[0]));
-                    printUsage (basename (argv[0]));
-                    return EXIT_FAILURE;
-                    }
-                    fName = optarg;
-                    break;
-        case 'n': /* numeric argument */
-                    if (atoi (optarg) <= 0)
-                    { fprintf (stderr, "%s: non positive number\n", basename (argv[0]));
-                        printUsage (basename (argv[0]));
-                        return EXIT_FAILURE;
-                    }
-                    value_opt = (int) atoi (optarg);
-                    break;
-        case 'h': /* help mode */
-                    printUsage (basename (argv[0]));
-                    return EXIT_SUCCESS;
-        case '?': /* invalid option */
-                    fprintf (stderr, "%s: invalid option\n", basename (argv[0]));
-                printUsage (basename (argv[0]));
-                    return EXIT_FAILURE;
-        case -1:  break;
-        }
-    } while (opt != -1);
+  int proccess_command = processCommandLine(argc, argv);
 
-    if (argc == 1){ 
-        fprintf (stderr, "%s: invalid format\n", basename (argv[0]));
-        printUsage (basename (argv[0]));
-        return EXIT_FAILURE;
-    }
+  if(proccess_command == EXIT_FAILURE){
+    return EXIT_FAILURE;
+  }
 
-    for(int i = 2; i < argc; i++){
-      filenames[i - 2] = argv[i]; 
-      //printf("%s \n", filenames[i - 2]);
-    }
-
-    num_files = argc - 2;
-
+  
 
   double t0, t1;
   
-  statusCons[N] = EXIT_SUCCESS;                                                                                      /* time limits */
+  //statusCons[N] = EXIT_SUCCESS;                                                                                      /* time limits */
+
+   for (i = 0; i < N; i++)
+    prod[i] = i;
 
   for (i = 0; i < N; i++)
     cons[i] = i;
@@ -128,12 +163,25 @@ int main (int argc, char* argv[])
   t0 = ((double) clock ()) / CLOCKS_PER_SEC;
 
   for (i = 0; i < N; i++)
+    if (pthread_create (&tIdProd[i], NULL, producer, &prod[i]) != 0)                              /* thread producer */
+       { perror ("error on creating thread producer");
+         exit (EXIT_FAILURE);
+       }
+  for (i = 0; i < N; i++)
     if (pthread_create (&tIdCons[i], NULL, consumer, &cons[i]) != 0)                             /* thread consumer */
        { perror ("error on creating thread consumer");
          exit (EXIT_FAILURE);
        }
 
   /* waiting for the termination of the intervening entities threads */
+  for (i = 0; i < N; i++)
+  { if (pthread_join (tIdProd[i], (void *) &status_p) != 0)                                       /* thread producer */
+       { perror ("error on waiting for thread producer");
+         exit (EXIT_FAILURE);
+       }
+    printf ("thread producer, with id %u, has terminated: ", i);
+    printf ("its status was %d\n", *status_p);
+  }
   for (i = 0; i < N; i++)
   { if (pthread_join (tIdCons[i], (void *) &status_p) != 0)                                       /* thread consumer */
        { perror ("error on waiting for thread customer");
@@ -148,6 +196,9 @@ int main (int argc, char* argv[])
 
   exit (EXIT_SUCCESS);
 }
+
+
+
 
 /**
  *  \brief Function consumer.
@@ -178,27 +229,41 @@ int main (int argc, char* argv[])
 //  pthread_exit (&statusCons[id]);
 //}
 
+static void *producer (void *par)
+{
+  unsigned int id = *((unsigned int *) par);                                                          /* producer id */
+  int i;                                                                                        /* counting variable */
+
+  for (i = 0; i < size_of_filenames; i++)
+  { 
+
+    fp = fopen(filenames[i], "r");
+
+    do{
+      
+      putVal(id, fp, num_of_bytes);
+
+    }while (!feof(fp));
+    
+    usleep((unsigned int) floor (40.0 * random () / RAND_MAX + 1.5));                           /* do something else */
+  }
+
+  statusProd[id] = EXIT_SUCCESS;
+  pthread_exit (&statusProd[id]);
+}
+
 static void *consumer(void *par) {
   unsigned int id = *((unsigned int *) par);
 
-  while(file_available(id)){
-    //int value_val = getVal(id);
-    //int counter = 0;
-    while (getVal(id))
-    {
-      //printf("%d \n", value_val);
-      //value_val = getVal(id);
-      //printf("chegou aqui \n");  
-      usleep((unsigned int) floor(40.0 * random() / RAND_MAX + 1.5));
-    }
-    //printf("worker if %d with last char %d \n", id, value_val);
-    //printf("%d \n", file_available(id));
-    //printf("Worker id: %d \n", id);
-    printf("nom words: %d \n", total_num_words);
-    closeFile(id);
-    
+  int i; 
+  int value;                                                                                       /* counting variable */
+
+  for (i = 0; i < size_of_filenames; i++)
+  { usleep((unsigned int) floor (40.0 * random () / RAND_MAX + 1.5));                           /* do something else */
+    value = getVal (id);                                                                           /* retrieve a value */
   }
-  //printf("ola");
+
+  printf("%d \n", value);
 
   statusCons[id] = EXIT_SUCCESS;
   pthread_exit (&statusCons[id]);

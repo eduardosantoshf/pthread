@@ -35,6 +35,8 @@ extern void closeFile(unsigned int id);
  *  \return value
  */
 
+extern unsigned int putVal (unsigned int consId, FILE *fp, unsigned int NoB);
+
 extern unsigned int getVal (unsigned int consId);
 
 #endif /* FIFO_H */
