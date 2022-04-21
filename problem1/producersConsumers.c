@@ -195,6 +195,7 @@ static void *consumer(void *par) {
     //printf("%d \n", file_available(id));
     //printf("Worker id: %d \n", id);
     printf("nom words: %d \n", total_num_words);
+    usleep((unsigned int) floor(40.0 * random() / RAND_MAX + 1.5));
     closeFile(id);
     
   }

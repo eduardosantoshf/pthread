@@ -113,7 +113,7 @@ int file_available(unsigned int id){
     
   }
 
-    printf("worker in file available %d \n", id);
+    //printf("worker in file available %d \n", id);
    // usleep((unsigned int) floor (40.0 * random () / RAND_MAX + 1.5));
   //printf("id %d ready_read %d \n", id, ready_read);
 
@@ -156,13 +156,13 @@ int file_available(unsigned int id){
         statusCons[id] = EXIT_FAILURE;
         pthread_exit(&statusCons[id]);
     }
-    //printf("%d \n", flag_file);
+    //printf("%d %d \n", id, flag_file);
     return flag_file;
 
 }
 
 void closeFile(unsigned int id){
-    printf("id %d done_reading %d \n", id, done_reading);
+    //printf("id %d done_reading %d \n", id, done_reading);
     //printf("entrou \n");
     //printf("Worker id 2: %d \n", id);
     //printf("%d %d\n", num_files, files_idx);
@@ -172,7 +172,7 @@ void closeFile(unsigned int id){
         statusCons[id] = EXIT_FAILURE;
         pthread_exit(&statusCons[id]);
     }
-    printf("id %d done_reading %d \n", id, done_reading);
+    //printf("id %d done_reading %d \n", id, done_reading);
     //pthread_once (&init, initialization);
     //printf("Worker id 2: %d \n", id);
     
@@ -196,6 +196,9 @@ void closeFile(unsigned int id){
         file_opened = 0;
         file_closed = 1;
         ready_read = 0;
+        total_num_words = 0;
+        num_vowels = 0;
+        num_cons = 0;
     }
 
     if ((statusCons[id] = pthread_cond_signal(&close_fi)) != 0) {                          /* */
@@ -217,6 +220,7 @@ void closeFile(unsigned int id){
 int get_int(FILE *fp){
     
     int ch_value = fgetc(fp);
+    //printf("%d \n", ch_value);
     int b = 0;
     
     // if EOF
@@ -333,7 +337,8 @@ int is_split(int char_value) {
 
 unsigned int getVal (unsigned int consId)
 {
-  //unsigned int val;                                                                             /* retrieved value */
+  //unsigned int val;      
+                                                                        /* retrieved value */
 
   if ((statusCons[consId] = pthread_mutex_lock (&vars_access)) != 0)                                   /* enter monitor */
      { errno = statusCons[consId];                                                            /* save error in errno */
@@ -343,6 +348,7 @@ unsigned int getVal (unsigned int consId)
      }
 
     //printf("%d \n", consId);
+    //printf("ID: %d \n", consId); 
   pthread_once (&init, initialization);                                              /* internal data initialization */
 //
   //while ((ii == ri) && !full)                                           /* wait if the data transfer region is empty */
@@ -355,14 +361,17 @@ unsigned int getVal (unsigned int consId)
   //}
 
   //val = mem[ri];  
+    int flag_file_over = 0;
 
   for(int counter = 0; counter < num_bytes; counter++){
       int ch_value = get_int(fp);
-      //printf("%d \n", ch_value);
+      //printf("%d %d \n", ch_value, consId);
       
       if(ch_value == -1){
           //printf(" chegou ao fim -1 \n");
-          return 0;
+          //printf("%d \n", consId);
+          flag_file_over = 1;
+          break;
       }
       
       //printf("%d \n", ch_value);
@@ -439,8 +448,11 @@ unsigned int getVal (unsigned int consId)
        pthread_exit (&statusCons[consId]);
      }
 
-  //printf("%d \n", total_num_words);
+  if(flag_file_over == 1){
+      return 0;
+  }
 
+  //printf("%d \n", total_num_words);
   return 1;
 }
 
