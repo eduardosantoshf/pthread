@@ -46,8 +46,6 @@ void openNextFile() {
     currIndex = 0;
 
     printf("---------------OPENED %s-------------- \n", files[currFile]);
-
-    printf("%s", files[currFile]);  
     
     file[currFile] = fopen(files[currFile],"rb");
 
@@ -56,16 +54,18 @@ void openNextFile() {
 
     fread(&order, sizeof(int), 1, file[currFile]);
 
-    printf("ENTROU AQUI");
+    
 
     finalInfo[currFile].order = order;
     finalInfo[currFile].matrix = malloc(size * sizeof(int *));
 
-    size = finalInfo[currFile].order * finalInfo[currFile].order;
+    size = finalInfo[currFile].order * finalInfo[currFile].order; // working correctly, on a 128 * 128 matrix order = 16 384
 
     for(int i = 0; i < size ; i++) {
         finalInfo[currFile].matrix[i] = malloc(size * sizeof(int));
     }
+    
+    printf("ENTROU AQUI\n");
 
     fread(finalInfo[currFile].matrix, sizeof(size), 1, file[currFile]);
 
@@ -83,13 +83,13 @@ void storeFileNames(int filesNumber, char * fileNames[]) {
     openNextFile();
 }
 
-int getVal(int threadId, int* fileId, int order, double ** matrix) {
-    if ((statusWorker[threadId] = pthread_mutex_lock (&accessCR)) != 0)                                   /* enter monitor */
+int getVal(int threadID, int* fileID, int* order, double ** matrix) {
+    if ((statusWorker[threadID] = pthread_mutex_lock (&accessCR)) != 0)                                   /* enter monitor */
     { 
-        errno = statusWorker[threadId];                                                            /* save error in errno */
+        errno = statusWorker[threadID];                                                            /* save error in errno */
         perror ("error on entering monitor(CF)");
-        statusWorker[threadId] = EXIT_FAILURE;
-        pthread_exit (&statusWorker[threadId]);
+        statusWorker[threadID] = EXIT_FAILURE;
+        pthread_exit (&statusWorker[threadID]);
     }
     
 
@@ -104,8 +104,8 @@ int getVal(int threadId, int* fileId, int order, double ** matrix) {
     {
 
         // Writing to the variables we need to
-        *fileId = currFile;
-        order = finalInfo[currFile].order;
+        *fileID = currFile;
+        *order = finalInfo[currFile].order;
         //**matrix = finalInfo[currFile].matrix;
         matrix = finalInfo[currFile].matrix;
         currIndex++;
@@ -116,14 +116,44 @@ int getVal(int threadId, int* fileId, int order, double ** matrix) {
     else
         status = 2; // status 2 == endProcess
 
-    //printf("THREAD %d released lock on ProcessConvPoint, status=%d\n\n", threadId, status);
-    if ((statusWorker[threadId] = pthread_mutex_unlock (&accessCR)) != 0)                                  /* exit monitor */
+    if ((statusWorker[threadID] = pthread_mutex_unlock (&accessCR)) != 0)                                  /* exit monitor */
     { 
-        errno = statusWorker[threadId];                                                            /* save error in errno */
+        errno = statusWorker[threadID];                                                            /* save error in errno */
         perror ("error on exiting monitor(CF)");
-        statusWorker[threadId] = EXIT_FAILURE;
-        pthread_exit (&statusWorker[threadId]);
+        statusWorker[threadID] = EXIT_FAILURE;
+        pthread_exit (&statusWorker[threadID]);
     }
 
     return status;
+}
+
+void savePartialResults(int threadID, int fileID, int matrixNumber, double det) {
+     // Here we need the lock to write partial results from PartialInfo to FinalInfo
+    // Only after partial results are saved, that we can save final results
+    if ((statusWorker[threadID] = pthread_mutex_lock (&accessCR)) != 0)                                   /* enter monitor */
+    { 
+        errno = statusWorker[threadID];                                                            /* save error in errno */
+        perror ("error on entering monitor(CF)");
+        statusWorker[threadID] = EXIT_FAILURE;
+        pthread_exit (&statusWorker[threadID]);
+    }
+
+    // Actual writing to struct
+    finalInfo[fileID].det = det;
+
+    if ((statusWorker[threadID] = pthread_mutex_unlock (&accessCR)) != 0)                                  /* exit monitor */
+    { 
+        errno = statusWorker[threadID];                                                            /* save error in errno */
+        perror ("error on exiting monitor(CF)");
+        statusWorker[threadID] = EXIT_FAILURE;
+        pthread_exit (&statusWorker[threadID]);
+    }
+}
+
+void storeResults() {
+
+}
+
+void checkProcessingResults() {
+    
 }

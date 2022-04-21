@@ -117,10 +117,9 @@ int main(int argc, char * argv[]) {
 
     //---------------THREADS
     for (int t = 0; t < threads; t++){
-        //create(t)
         if (pthread_create (&tIdworker[t], NULL, worker, &workers[t]) != 0)                              /* thread producer */
         { 
-            perror ("error on creating thread worker");
+            perror ("Error on creating thread worker");
             exit (EXIT_FAILURE);
         }
     }
@@ -128,12 +127,12 @@ int main(int argc, char * argv[]) {
     for (int t = 0; t < threads; t++){
         if (pthread_join (tIdworker[t], (void *) &status_p) != 0)                                       /* thread producer */
         { 
-            perror ("error on waiting for thread worker");
+            perror ("Error on waiting for thread worker");
             exit (EXIT_FAILURE);
         }
         
-        printf ("thread worker, with id %d, has terminated: ", t);
-        printf ("its status was %d\n", *status_p);
+        printf ("Thread worker, with id %d, has terminated: ", t);
+        printf ("Its status was %d\n", *status_p);
     }
 
     // If the partialInfo class is not empty, store the results in the given file
@@ -160,34 +159,21 @@ static void *worker (void *par) {
 
     printf("Thread %d created \n", id);
 
-    //double ** matrix;
-    //int order, fileID;
+    double ** matrix = NULL;
+    int order = 0;
+    int fileID = 0;
 
-    //double det; /* will hold the value of a determinant */
-    /*
-    while (getVal(id, &fileID, &order, &matrix) != 2) {
+    double det; /* will hold the value of a determinant */
+    
+    while (getVal(id, fileID, order, matrix) != 2) {
         det = computeDet(order, matrix);
         //TODO: save partial results
     }
-    */
-   printf("entrou");
+    
 
     statusWorker[id] = EXIT_SUCCESS;
     pthread_exit (&statusWorker[id]);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * \brief Processes the input command
