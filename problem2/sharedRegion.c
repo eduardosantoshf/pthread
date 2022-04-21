@@ -32,6 +32,7 @@ static int currFile = 0;
 static int currIndex = 0;
 static int finishedFiles = 0;
 struct PartialInfo finalInfo[15];
+static int c = 0;
 
 
 
@@ -46,12 +47,16 @@ void openNextFile() {
 
     printf("---------------OPENED %s-------------- \n", files[currFile]);
 
+    printf("%s", files[currFile]);  
+    
     file[currFile] = fopen(files[currFile],"rb");
 
     int order = 0;
     int size = 0;
 
     fread(&order, sizeof(int), 1, file[currFile]);
+
+    printf("ENTROU AQUI");
 
     finalInfo[currFile].order = order;
     finalInfo[currFile].matrix = malloc(size * sizeof(int *));
@@ -68,11 +73,11 @@ void openNextFile() {
 }
 
 void storeFileNames(int filesNumber, char * fileNames[]) {
-    //int nextfile;
     numberOfFiles = filesNumber;                     //number of files
-
-    for (int i = 0; i < filesNumber; i++){
-        files[i] = fileNames[i];
+    
+    for (int i = 2; i < 2 + filesNumber; i++){
+        files[c] = fileNames[i];
+        c++;
     }
 
     openNextFile();

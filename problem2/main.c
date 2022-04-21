@@ -115,10 +115,6 @@ int main(int argc, char * argv[]) {
     
     storeFileNames(argc - 2, argv); // !!!!!! acho que está a dar segmentation fault aqui
 
-    printf("%d", argc - 2);
-    printf("chegou aqui");
-    return 0;
-
     //---------------THREADS
     for (int t = 0; t < threads; t++){
         //create(t)
