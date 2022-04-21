@@ -20,7 +20,7 @@
 #define  K            20
 
 /** \brief number of iterations of the life cycle */
-#define  M           5
+
 
 
 #endif /* PROBCONST_H_ */
