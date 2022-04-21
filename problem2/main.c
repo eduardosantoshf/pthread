@@ -91,10 +91,8 @@ double computeDet(int order, double **matrix) {
  * In the end, accesses the shared region to obtain the results and stores them in files.
  */
 int main(int argc, char * argv[]) {
-    char *files[10]; 
-    int threads = 2; //TODO: make tthis value non-hardcoded
+    int threads = 2; //TODO: make this value non-hardcoded
 
-    //int i, j, k;
     // will hold the output of processing the command
     int command_result;
 
@@ -106,9 +104,6 @@ int main(int argc, char * argv[]) {
     if (command_result != EXIT_SUCCESS)
         return command_result;
 
-    for (int b = 2; b < argc; b++)
-        files[b] = argv[b];
-
     statusWorker = malloc(sizeof(int)*threads);
 
     pthread_t tIdworker[threads];
@@ -117,8 +112,12 @@ int main(int argc, char * argv[]) {
 
     for (int t = 0; t < threads; t++)
         workers[t] = t;
+    
+    storeFileNames(argc - 2, argv); // !!!!!! acho que está a dar segmentation fault aqui
 
-    storeFileNames(argc - 2, files);
+    printf("%d", argc - 2);
+    printf("chegou aqui");
+    return 0;
 
     //---------------THREADS
     for (int t = 0; t < threads; t++){
@@ -129,6 +128,7 @@ int main(int argc, char * argv[]) {
             exit (EXIT_FAILURE);
         }
     }
+    
     for (int t = 0; t < threads; t++){
         if (pthread_join (tIdworker[t], (void *) &status_p) != 0)                                       /* thread producer */
         { 

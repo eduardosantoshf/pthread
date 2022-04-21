@@ -101,6 +101,7 @@ int getVal(int threadId, int* fileId, int order, double ** matrix) {
         // Writing to the variables we need to
         *fileId = currFile;
         order = finalInfo[currFile].order;
+        //**matrix = finalInfo[currFile].matrix;
         matrix = finalInfo[currFile].matrix;
         currIndex++;
         status = 0;
