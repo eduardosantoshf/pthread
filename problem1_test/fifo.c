@@ -25,29 +25,14 @@
 
 #include "probConst.h"
 
-/** \brief producer threads return status array */
-extern int statusProd[N];
 
 /** \brief consumer threads return status array */
+extern int statusProd[N];
 extern int statusCons[N];
 
 /** \brief storage region */
-static unsigned int mem[K];
-
-//static unsigned int char_values[K];
-static FILE *file_pointer;
-FILE* file;
-int num_vowels;
-int num_cons;
-int total_num_words;
-
-int value_before;
-
-int end_of_word;
-
-int flag;
-
-int num_bytes = 5;
+static FILE **mem;
+static unsigned int num_of_bytes;
 
 /** \brief insertion pointer */
 static unsigned int ii;
@@ -55,11 +40,26 @@ static unsigned int ii;
 /** \brief retrieval pointer */
 static unsigned int ri;
 
+
+//static unsigned int char_values[K];
+extern FILE* fp;
+extern char **filenames;
+
+int num_bytes = 1;
+
+int ready_read;
+
+/** \brief insertion pointer */
+//static unsigned int ii;
+
+/** \brief retrieval pointer */
+//static unsigned int ri;
+
 /** \brief flag signaling the data transfer region is full */
 static bool full;
 
 /** \brief locking flag which warrants mutual exclusion inside the monitor */
-static pthread_mutex_t accessCR = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t vars_access = PTHREAD_MUTEX_INITIALIZER;
 
 /** \brief flag which warrants that the data transfer region is initialized exactly once */
 static pthread_once_t init = PTHREAD_ONCE_INIT;;
@@ -69,6 +69,19 @@ static pthread_cond_t fifoFull;
 
 /** \brief consumers synchronization point when the data transfer region is empty */
 static pthread_cond_t fifoEmpty;
+
+int files_idx = 0;
+int file_opened = 0;
+int file_closed = 0;
+int done_reading = 0;
+int num_vowels = 0;
+int num_cons = 0;
+int total_num_words = 0;
+int value_before = 0;
+int end_of_word = 0;
+int flag = 0;
+
+extern int num_files;
 
 // function that returns the next char in integer value
 int get_int(FILE *fp){
@@ -163,7 +176,7 @@ static void initialization (void)
                                                                                    /* initialize FIFO in empty state */
   ii = ri = 0;                                        /* FIFO insertion and retrieval pointers set to the same value */
   full = false;     /* FIFO is not full */
-  file = fopen("countWords/text1.txt", "r");
+  fp = fopen("countWords/text0.txt", "r");
   num_vowels = 0;
   num_cons = 0;
   total_num_words = 0;
@@ -178,6 +191,7 @@ static void initialization (void)
   pthread_cond_init (&fifoEmpty, NULL);                                /* initialize consumers synchronization point */
 }
 
+
 /**
  *  \brief Store a value in the data transfer region.
  *
@@ -187,9 +201,9 @@ static void initialization (void)
  *  \param val value to be stored
  */
 
-void putVal (unsigned int prodId, unsigned int val, FILE *f)
+void putVal (unsigned int prodId, FILE *fp, unsigned int NoB)
 {
-  if ((statusProd[prodId] = pthread_mutex_lock (&accessCR)) != 0)                                   /* enter monitor */
+  if ((statusProd[prodId] = pthread_mutex_lock (&vars_access)) != 0)                                   /* enter monitor */
      { errno = statusProd[prodId];                                                            /* save error in errno */
        perror ("error on entering monitor(CF)");
        statusProd[prodId] = EXIT_FAILURE;
@@ -198,7 +212,7 @@ void putVal (unsigned int prodId, unsigned int val, FILE *f)
   pthread_once (&init, initialization);                                              /* internal data initialization */
 
   while (full)                                                           /* wait if the data transfer region is full */
-  { if ((statusProd[prodId] = pthread_cond_wait (&fifoFull, &accessCR)) != 0)
+  { if ((statusProd[prodId] = pthread_cond_wait (&fifoFull, &vars_access)) != 0)
        { errno = statusProd[prodId];                                                          /* save error in errno */
          perror ("error on waiting in fifoFull");
          statusProd[prodId] = EXIT_FAILURE;
@@ -206,12 +220,8 @@ void putVal (unsigned int prodId, unsigned int val, FILE *f)
        }
   }
 
-  mem[ii] = val;       
-  
-  file_pointer = f;
-  //int ch_value = get_int(f);
-  //char_values[ii] = ch_value;
-                                                                     /* store value in the FIFO */
+  mem[ii] = fp;
+  num_of_bytes = NoB;                                                                          /* store value in the FIFO */
   ii = (ii + 1) % K;
   full = (ii == ri);
 
@@ -223,7 +233,7 @@ void putVal (unsigned int prodId, unsigned int val, FILE *f)
        pthread_exit (&statusProd[prodId]);
      }
 
-  if ((statusProd[prodId] = pthread_mutex_unlock (&accessCR)) != 0)                                  /* exit monitor */
+  if ((statusProd[prodId] = pthread_mutex_unlock (&vars_access)) != 0)                                  /* exit monitor */
      { errno = statusProd[prodId];                                                            /* save error in errno */
        perror ("error on exiting monitor(CF)");
        statusProd[prodId] = EXIT_FAILURE;
@@ -245,7 +255,7 @@ unsigned int getVal (unsigned int consId)
 {
   //unsigned int val;                                                                             /* retrieved value */
 
-  if ((statusCons[consId] = pthread_mutex_lock (&accessCR)) != 0)                                   /* enter monitor */
+  if ((statusCons[consId] = pthread_mutex_lock (&vars_access)) != 0)                                   /* enter monitor */
      { errno = statusCons[consId];                                                            /* save error in errno */
        perror ("error on entering monitor(CF)");
        statusCons[consId] = EXIT_FAILURE;
@@ -254,7 +264,7 @@ unsigned int getVal (unsigned int consId)
   pthread_once (&init, initialization);                                              /* internal data initialization */
 
   while ((ii == ri) && !full)                                           /* wait if the data transfer region is empty */
-  { if ((statusCons[consId] = pthread_cond_wait (&fifoEmpty, &accessCR)) != 0)
+  { if ((statusCons[consId] = pthread_cond_wait (&fifoEmpty, &vars_access)) != 0)
        { errno = statusCons[consId];                                                          /* save error in errno */
          perror ("error on waiting in fifoEmpty");
          statusCons[consId] = EXIT_FAILURE;
@@ -263,10 +273,14 @@ unsigned int getVal (unsigned int consId)
   }
 
   //val = mem[ri];  
+  
+  FILE *pointer = mem[ri];
+  
+  for(int counter = 0; counter < num_of_bytes; counter++){
 
-  for(int counter = 0; counter < num_bytes; counter++){
+      int ch_value = get_int(pointer);
 
-      int ch_value = get_int(file);
+      
       //printf("%d \n", ch_value);
       //printf("%d \n\n", consId);
       //val = char_values[ri];
@@ -283,6 +297,7 @@ unsigned int getVal (unsigned int consId)
       // check if is a lonely apostrophe to avoid counting as word
       if(ch_value == 39 || ch_value == 8216 || ch_value == 8217){
           if(is_split(value_before)){
+            continue;
           }
       }
 
@@ -333,7 +348,7 @@ unsigned int getVal (unsigned int consId)
        pthread_exit (&statusCons[consId]);
      }
 
-  if ((statusCons[consId] = pthread_mutex_unlock (&accessCR)) != 0)                                   /* exit monitor */
+  if ((statusCons[consId] = pthread_mutex_unlock (&vars_access)) != 0)                                   /* exit monitor */
      { errno = statusCons[consId];                                                             /* save error in errno */
        perror ("error on exiting monitor(CF)");
        statusCons[consId] = EXIT_FAILURE;

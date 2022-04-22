@@ -19,16 +19,11 @@
 #ifndef FIFO_H
 #define FIFO_H
 
-/**
- *  \brief Store a value in the data transfer region.
- *
- *  Operation carried out by the producers.
- *
- *  \param prodId producer identification
- *  \param val value to be stored
- */
+/** \brief verify if there's files available to open, and open them. */
+extern int file_available(unsigned int id);
 
-extern void putVal (unsigned int prodId, unsigned int val, FILE *f);
+/** \brief close the opened file, if there's one opened. */
+extern void closeFile(unsigned int id);
 
 /**
  *  \brief Get a value from the data transfer region.
@@ -39,6 +34,8 @@ extern void putVal (unsigned int prodId, unsigned int val, FILE *f);
  *
  *  \return value
  */
+
+extern unsigned int putVal (unsigned int consId, FILE *fp, unsigned int NoB);
 
 extern unsigned int getVal (unsigned int consId);
 

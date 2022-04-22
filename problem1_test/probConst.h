@@ -14,13 +14,13 @@
 /* Generic parameters */
 
 /** \brief number of producers / consumers */
-#define  N           6
+#define  N           10
 
 /** \brief data transfer region nominal capacity (in number of values that can be stored) */
-#define  K            20
+#define  K            10
 
 /** \brief number of iterations of the life cycle */
-
+#define  M           10
 
 
 #endif /* PROBCONST_H_ */

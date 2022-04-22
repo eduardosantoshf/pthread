@@ -1,253 +1,210 @@
+/**
+ *  \file main.c (implementation file)
+ *
+ *  \brief Problem name: Total number of words, number of words beginning with a vowel and ending with a consonant.
+ *
+ *  Synchronization based on monitors.
+ *  Both threads and the monitor are implemented using the pthread library which enables the creation of a
+ *  monitor of the Lampson / Redell type.
+ *
+ *  Generator thread of the intervening entities.
+ *
+ *  \author Eduardo Santos and Pedro Bastos - April 2022
+ */
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <math.h>
+#include <time.h>
+
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <libgen.h> 
-#include <unistd.h>
+#include <libgen.h>
 
-static void printUsage (char *cmdName);
+#include "probConst.h"
+#include "shared.h"
 
-// function to check if it is a vowel
-int is_vowel(int char_value) {
-    int vowels[] = {97, 101, 105, 111, 117, 65, 69, 73, 79, 85, 224, 225, 226, 227, 232, 233, 234, 236, 237, 238,
-                          242, 243, 244, 245, 249, 250,  192, 193, 194, 195, 200, 201, 202, 204, 205, 206, 210,
-                          211, 212, 213, 217, 218, 219, 251 };
+/** \brief Number of files */
+int num_files;
 
-    for (int i = 0; i < sizeof(vowels) / sizeof(vowels[0]); i++)
-        if (vowels[i] == char_value){
-            return 1;
+/** \brief pointer to save the filenames */
+char **filenames;
+
+/** \brief array to save the total number of words for each file */
+int *array_num_words;
+
+/** \brief array to save the number of words beginning with a vowel for each file */
+int *array_num_vowels;
+
+/** \brief array to save the number of words ending with a consonant for each file */
+int *array_num_cons;
+
+/** \brief consumer threads return status array */
+int statusCons[N];
+
+/** \brief consumer life cycle routine */
+static void *consumer(void *id);
+
+/** \brief Prints command usage */
+static void printUsage(char *cmdName)
+{
+  fprintf(stderr, "\nSynopsis: %s OPTIONS [filename / positive number]\n"
+                  "  OPTIONS:\n"
+                  "  -h      --- print this help\n"
+                  "  -f      --- filename\n"
+                  "  -n      --- positive number\n",
+          cmdName);
+}
+
+/**
+ *  \brief Main thread.
+ *
+ *  Its role is starting the simulation by generating the intervening entities threads (consumers),
+ *  waiting for their termination and printing the final results for each file.
+ */
+int main(int argc, char *argv[]) {
+  
+  pthread_t tIdCons[N];            /* consumers internal thread id array */ /* consumers internal thread id array */
+  unsigned int cons[N];                                          /* consumers application defined thread id array */
+  filenames = malloc((argc - 1) * sizeof(char *));                /* Allocate the needed memory for the filenames */
+
+  int i;                                                                                     /* counting variable */
+  int *status_p;                                                                   /* pointer to execution status */
+
+  int opt;                                                                                     /* selected option */
+  char *fName = "no name";                                     /* file name (initialized to "no name" by default) */
+  int value_opt = -1;                                             /* numeric value (initialized to -1 by default) */
+
+
+  /* Handle command line options */
+  do {
+    switch ((opt = getopt(argc, argv, "f:n:h"))) {
+      case 'f':                                                                                      /* file name */
+        if (optarg[0] == '-') {
+          fprintf(stderr, "%s: file name is missing\n", basename(argv[0]));
+          printUsage(basename(argv[0]));
+          return EXIT_FAILURE;
         }
+        fName = optarg;
+        break;
 
-    return 0;
-}
-
-// function to check if it is a consonant
-int is_consonant(int char_value) {
-    int consonants[] = {98, 99, 100, 102, 103, 104, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 118, 119, 120, 121, 122,
-                        66, 67, 68, 70, 71, 72, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 86, 87, 88, 89, 90,
-                        231, 199};
-
-    for (int i = 0; i < sizeof(consonants) / sizeof(consonants[0]); i++)
-        if (consonants[i] == char_value)
-            return 1;
-
-    return 0;
-}
-
-// function to check if it is a split char
-int is_split(int char_value) {
-    int splits[] = {32, 9, 10, 45, 34, 8220, 8221, 91, 93, 123, 125, 40, 41, 46, 44,
-                                58, 59, 63, 33, 8211, 8212, 8230, 171, 187, 96};
-
-    for (int i = 0; i < sizeof(splits) / sizeof(splits[0]); i++)
-        if (splits[i] == char_value)
-            return 1;
-
-    return 0;
-}
-
-// function that returns the next char in integer value
-int get_int(FILE *fp){
-    
-    int ch_value = fgetc(fp);
-    int b = 0;
-    
-    // if EOF
-    if(ch_value == -1) 
-        return -1;
-
-    // if is only 1 byte char, return it
-    if((ch_value & 128) == 0) {
-        return ch_value;
-    }
-
-    // if contains 226 ('e2'), then it is a 3 byte char
-    if(ch_value == 226){
-        b = 3;
-        ch_value = ch_value & (1 << 4) - 1;
-    }
-    // else, is a 2 byte char
-    else{
-        b = 2;
-        ch_value = ch_value & (1 << 5) - 1;
-    }
-
-    // go through number of the char bytes
-    for(int x = 1; x < b; x ++){
-
-        // get next byte
-        int next_ch_value = fgetc(fp);
-
-        // if EOF
-        if (next_ch_value == -1) 
-            return -1;
-        
-        // calculate int value of the char
-        ch_value = (ch_value << 6) | (next_ch_value & 63);
-    }
-
-    return ch_value;
-}
-
-
-int main(int argc, char* argv[]){
-    int num_vowels = 0;
-    int num_cons = 0;
-    int total_num_words = 0;
-
-    int value_before = 0;
-
-    int end_of_word = 0;
-
-    int flag = 0;
-
-    double t0, t1, t2; /* time limits */
-    t2 = 0.0;
-
-    int opt;                  /* selected option */
-    char *fName = "no name";  /* file name (initialized to "no name" by default) */
-    int val = -1;             /* numeric value (initialized to -1 by default) */
-    opterr = 0;
-    do
-    { switch ((opt = getopt (argc, argv, "f:n:h"))) { 
-        case 'f': /* file name */
-                if (optarg[0] == '-')
-                    { fprintf (stderr, "%s: file name is missing\n", basename (argv[0]));
-                    printUsage (basename (argv[0]));
-                    return EXIT_FAILURE;
-                    }
-                    fName = optarg;
-                    break;
-        case 'n': /* numeric argument */
-                    if (atoi (optarg) <= 0)
-                    { fprintf (stderr, "%s: non positive number\n", basename (argv[0]));
-                        printUsage (basename (argv[0]));
-                        return EXIT_FAILURE;
-                    }
-                    val = (int) atoi (optarg);
-                    break;
-        case 'h': /* help mode */
-                    printUsage (basename (argv[0]));
-                    return EXIT_SUCCESS;
-        case '?': /* invalid option */
-                    fprintf (stderr, "%s: invalid option\n", basename (argv[0]));
-                printUsage (basename (argv[0]));
-                    return EXIT_FAILURE;
-        case -1:  break;
+      case 'n':                                                                               /* numeric argument */
+        if (atoi(optarg) <= 0) {
+          fprintf(stderr, "%s: non positive number\n", basename(argv[0]));
+          printUsage(basename(argv[0]));
+          return EXIT_FAILURE;
         }
-    } while (opt != -1);
+        value_opt = (int)atoi(optarg);
+        break;
 
-    if (argc == 1){ 
-        fprintf (stderr, "%s: invalid format\n", basename (argv[0]));
-        printUsage (basename (argv[0]));
+      case 'h':                                                                                      /* help mode */
+        printUsage(basename(argv[0]));
+        return EXIT_SUCCESS;
+
+      case '?':                                                                                 /* invalid option */
+        fprintf(stderr, "%s: invalid option\n", basename(argv[0]));
+        printUsage(basename(argv[0]));
         return EXIT_FAILURE;
+
+      case -1:
+        break;
+
     }
 
-    int o; /* counting variable */
+  } while (opt != -1);
 
-    printf ("File name = %s\n", fName);
-    printf ("Numeric value = %d\n", val);
+  if (argc == 1) {
+    fprintf(stderr, "%s: invalid format\n", basename(argv[0]));
+    printUsage(basename(argv[0]));
+    return EXIT_FAILURE;
+  }
 
-    for (o = 0; o < argc; o++)
-        printf ("Word %d = %s\n", o, argv[o]);
 
-    printf("\n");
+  /* Save filenames */
+  for (int i = 2; i < argc; i++){
+    filenames[i - 2] = argv[i];
+  }
 
-    // loop through the arguments
-    for(int i = 2; i < argc; i++){
+  /* Save number of files */
+  num_files = argc - 2;
 
-        // open file
-        FILE* file = fopen(argv[i], "r");
+  /* allocate the needed space in the arrays to save the results*/
+  array_num_words = (int *)malloc(num_files * sizeof(int));
+  array_num_vowels = (int *)malloc(num_files * sizeof(int));
+  array_num_cons = (int *)malloc(num_files * sizeof(int));
 
-        t0 = ((double) clock ()) / CLOCKS_PER_SEC;
+  double t0, t1;                                                                                    /* time limits */
 
-        do{
-            // next char value
-            int char_value = get_int(file);
-            printf("%d \n", char_value);
-            
-            // check if first char of file is vowel
-            if(flag == 0){
-                if(is_vowel(char_value) == 1){
-                    num_vowels += 1;
-                }
-                flag = 1;
-            }
+  for (i = 0; i < N; i++)
+    cons[i] = i;
 
-            // check if is a lonely apostrophe to avoid counting as word
-            if(char_value == 39 || char_value == 8216 || char_value == 8217){
-                if(is_split(value_before)){
-                    continue;
-                }
-            }
+  srandom((unsigned int)getpid());
+  t0 = ((double)clock()) / CLOCKS_PER_SEC;
 
-            // if is split char
-            if(is_split(char_value)){
+  /* generation of worker threads */
 
-                // check if previous char was a consonant
-                if(is_consonant(value_before))
-                    num_cons += 1;
-                
-                end_of_word = 1;
-            }
-
-            // not a split chat
-            else{
-
-                // check if is end of word to sum total words
-                if(end_of_word == 1){
-
-                    total_num_words += 1;
-                    end_of_word = 0;
-
-                    // if first char of new word is vowel
-                    if(is_vowel(char_value) == 1){
-
-                        num_vowels += 1;
-                    }
-                        
-                }
-            }
-
-            // save previous char to check in next iteration
-            value_before = char_value;
-            
-        } while(!feof(file));
-
-        t1 = ((double) clock ()) / CLOCKS_PER_SEC;
-        t2 += t1 - t0;
-
-        // close file and reset counting variables
-        fclose(file);
-
-        // print solutions
-        printf("%s \n", argv[i]);
-        printf("Number of words: %d \n", total_num_words);
-        printf("Number of words starting with a vowel: %d \n", num_vowels);
-        printf("Number of words ending with a consonant: %d \n\n", num_cons);
-
-        num_vowels = 0;
-        num_cons = 0;
-        total_num_words = 0;
-        
-        end_of_word = 0;
-
-        value_before = 0;
-
-        flag = 0;
-       
+  for (i = 0; i < N; i++)
+    if (pthread_create(&tIdCons[i], NULL, consumer, &cons[i]) != 0){                            /* thread consumer */
+      perror("error on creating thread consumer");
+      exit(EXIT_FAILURE);
     }
 
-    printf ("\nElapsed time = %.6f s\n", t2);
+  /* waiting for the termination of the intervening entities threads */
+  for (i = 0; i < N; i++) {
+    if (pthread_join(tIdCons[i], (void *)&status_p) != 0) {                                     /* thread consumer */
+      perror("error on waiting for thread customer");
+      exit(EXIT_FAILURE);
+    }
 
+    printf("thread consumer, with id %u, has terminated: ", i);
+    printf("its status was %d\n", *status_p);
+  }
+
+  t1 = ((double)clock()) / CLOCKS_PER_SEC;
+
+  /* call function to write final results */
+  writeFinal();
+
+  /* print time spent */
+  printf("\nElapsed time = %.6f s\n", t1 - t0);
+
+  exit(EXIT_SUCCESS);
 }
 
-static void printUsage (char *cmdName) {
-  fprintf (stderr, "\nSynopsis: %s OPTIONS [filename / positive number]\n"
-           "  OPTIONS:\n"
-           "  -h      --- print this help\n"
-           "  -f      --- filename\n"
-           "  -n      --- positive number\n", cmdName);
+/**
+ *  \brief Function consumer.
+ *
+ *  Its role is to simulate the life cycle of a consumer.
+ *
+ *  \param par pointer to application defined consumer identification
+ */
+
+static void *consumer(void *par){
+
+  /* consumer id */
+  unsigned int id = *((unsigned int *)par);
+
+  /* while there is files to read */
+  while (file_available(id)) {
+
+    /* while there is data to read from the current file */
+    while (getVal(id)){
+      usleep((unsigned int)floor(40.0 * random() / RAND_MAX + 1.5));
+    }
+
+    //usleep((unsigned int)floor(40.0 * random() / RAND_MAX + 1.5));
+    
+    /* saves results for each file in the variables */
+    write_file_results(id);
+
+    /* close current file */
+    closeFile(id);
+  }
+
+  statusCons[id] = EXIT_SUCCESS;
+  pthread_exit(&statusCons[id]);
 }
