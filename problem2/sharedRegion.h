@@ -1,3 +1,5 @@
+#include "PartialInfo.h"
+
 /**
  *  \file sharedRegion.h (interface file)
  *
@@ -19,7 +21,7 @@ void storeFileNames(int filesNumber, char * fileNames[]);
 
 void openNextFile();
 
-int getVal(int threadID, int fileID, int order, double ** matrix);
+int getVal(int threadID, PartialInfo *info);
 
 void savePartialResults(int threadID, int fileID, int matrixNumber, double det);
 

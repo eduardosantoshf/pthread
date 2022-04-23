@@ -16,74 +16,94 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <errno.h>
+#include <stdbool.h>
 #include "probConst.h"
 #include "PartialInfo.h"
 
 /** \brief worker status */
 extern int *statusWorker;
 
+extern PartialInfo **finalInfo;
+extern int *totalMatrices;
+
 /** \brief locking flag which warrants mutual exclusion inside the monitor */
 static pthread_mutex_t accessCR = PTHREAD_MUTEX_INITIALIZER;
 
+
 static int numberOfFiles;
-static char *files[15];
+static char **files;
 static FILE *file [15];
-static int currFile = 0;
-static int currIndex = 0;
-static int finishedFiles = 0;
-struct PartialInfo finalInfo[15];
+static int currFile = 0;        
+static int currIndex = 0;       // index da matrix
+static bool finishedFiles = false;
 static int c = 0;
+
+PartialInfo **finalInfo;
+int *totalMatrices;
 
 
 
 void openNextFile() {
-    if (numberOfFiles == currFile){
-        printf("\nAll files read\n");
-        finishedFiles = 1;
-        return;
-    }
-
     currIndex = 0;
+
+    if (numberOfFiles <= currFile) return;
 
     printf("---------------OPENED %s-------------- \n", files[currFile]);
     
     file[currFile] = fopen(files[currFile],"rb");
+    if (file[currFile] == NULL) {
+        printf("Error! File %s not found.\n", files[currFile]);
+        exit(1);
+    }
 
+    int nMatrices = 0;
     int order = 0;
     int size = 0;
 
+    fread(&nMatrices, sizeof(int), 1, file[currFile]);
     fread(&order, sizeof(int), 1, file[currFile]);
 
+    size = order * order; // working correctly, on a 128 * 128 matrix order = 16 384
+    totalMatrices[currFile] = nMatrices;
+    finalInfo[currFile] = malloc(sizeof(*finalInfo[0])*nMatrices);
     
-
-    finalInfo[currFile].order = order;
-    finalInfo[currFile].matrix = malloc(size * sizeof(int *));
-
-    size = finalInfo[currFile].order * finalInfo[currFile].order; // working correctly, on a 128 * 128 matrix order = 16 384
-
-    for(int i = 0; i < size ; i++) {
-        finalInfo[currFile].matrix[i] = malloc(size * sizeof(int));
+    for (int i = 0; i < nMatrices; i++) {
+        finalInfo[currFile][i].file_id = currFile + 1;
+        finalInfo[currFile][i].matrix_id = i + 1;
+        finalInfo[currFile][i].order = order;
+        finalInfo[currFile][i].matrix = malloc(order * sizeof(double *));
+        for(int ii = 0; ii < order; ii++) {
+            finalInfo[currFile][i].matrix[ii] = malloc(order * sizeof(double));
+            fread(finalInfo[currFile][i].matrix[ii], sizeof(double), order, file[currFile]);
+        }
+        
+        // for(int x = 0; x < order; x++)
+        // {
+        //     for(int j = 0; j < order; j++)
+        //     {
+        //         printf("%7.2f\t",finalInfo[currFile][i].matrix[x][j]);
+        //     }
+        //     printf("\n");
+        // }
     }
     
-    printf("ENTROU AQUI\n");
-
-    fread(finalInfo[currFile].matrix, sizeof(size), 1, file[currFile]);
-
     return;
 }
 
 void storeFileNames(int filesNumber, char * fileNames[]) {
     numberOfFiles = filesNumber;                     //number of files
-    
+    files = malloc(sizeof(char *)*numberOfFiles);
     for (int i = 2; i < 2 + filesNumber; i++){
         files[c] = fileNames[i];
         c++;
     }
+    finalInfo = malloc(sizeof(*finalInfo)*numberOfFiles);
+    totalMatrices = malloc(sizeof(int)*numberOfFiles);
 
     openNextFile();
 }
 
-int getVal(int threadID, int* fileID, int* order, double ** matrix) {
+int getVal(int threadID, PartialInfo *info) {
     if ((statusWorker[threadID] = pthread_mutex_lock (&accessCR)) != 0)                                   /* enter monitor */
     { 
         errno = statusWorker[threadID];                                                            /* save error in errno */
@@ -92,29 +112,33 @@ int getVal(int threadID, int* fileID, int* order, double ** matrix) {
         pthread_exit (&statusWorker[threadID]);
     }
     
-
     // This condition means we have reached the end of the file, so the next point we want to process is
-    if (finalInfo[currFile].order == currIndex) {
+
+    if (totalMatrices[currFile] <= currIndex) {
+        printf("read next file\n");
         currFile++;
         openNextFile();
+    }
+
+    if (numberOfFiles <= currFile){
+        printf("\nAll files read\n");
+        finishedFiles = true;
     }
 
     int status;
     if (!finishedFiles)    //work is not over
     {
-
+        printf("reading data\n");
         // Writing to the variables we need to
-        *fileID = currFile;
-        *order = finalInfo[currFile].order;
-        //**matrix = finalInfo[currFile].matrix;
-        matrix = finalInfo[currFile].matrix;
+        (*info) = finalInfo[currFile][currIndex];
+        
         currIndex++;
         status = 0;
-
-
     }
-    else
+    else {
+        printf("exiting\n");
         status = 2; // status 2 == endProcess
+    }
 
     if ((statusWorker[threadID] = pthread_mutex_unlock (&accessCR)) != 0)                                  /* exit monitor */
     { 
@@ -123,6 +147,7 @@ int getVal(int threadID, int* fileID, int* order, double ** matrix) {
         statusWorker[threadID] = EXIT_FAILURE;
         pthread_exit (&statusWorker[threadID]);
     }
+    printf("outside lock\n");
 
     return status;
 }
@@ -139,7 +164,7 @@ void savePartialResults(int threadID, int fileID, int matrixNumber, double det) 
     }
 
     // Actual writing to struct
-    finalInfo[fileID].det = det;
+    finalInfo[fileID]->det = det;
 
     if ((statusWorker[threadID] = pthread_mutex_unlock (&accessCR)) != 0)                                  /* exit monitor */
     { 
@@ -155,5 +180,5 @@ void storeResults() {
 }
 
 void checkProcessingResults() {
-    
+
 }

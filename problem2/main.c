@@ -28,6 +28,10 @@
 #include <pthread.h>
 #include "probConst.h"
 #include "sharedRegion.h"
+#include "PartialInfo.h"
+
+PartialInfo **finalInfo;
+int *totalMatrices;
 
 /** \brief process the called command. */
 static int process_command(int argc, char *argv[]);
@@ -113,7 +117,8 @@ int main(int argc, char * argv[]) {
     for (int t = 0; t < threads; t++)
         workers[t] = t;
     
-    storeFileNames(argc - 2, argv); // !!!!!! acho que está a dar segmentation fault aqui
+    int numberOfFiles = argc - 2;
+    storeFileNames(numberOfFiles, argv); // !!!!!! acho que está a dar segmentation fault aqui
 
     //---------------THREADS
     for (int t = 0; t < threads; t++){
@@ -133,6 +138,12 @@ int main(int argc, char * argv[]) {
         
         printf ("Thread worker, with id %d, has terminated: ", t);
         printf ("Its status was %d\n", *status_p);
+    }
+
+    for (int i = 0; i < numberOfFiles; i++) {
+        for (int j = 0; j < totalMatrices[i]; j++) {
+            printf("det: %f\n", finalInfo[i][j].det);
+        }
     }
 
     // If the partialInfo class is not empty, store the results in the given file
@@ -159,17 +170,17 @@ static void *worker (void *par) {
 
     printf("Thread %d created \n", id);
 
-    double ** matrix = NULL;
-    int order = 0;
-    int fileID = 0;
+    PartialInfo info; 
+    // int curr_file;
+    // int curr_matrix;
 
-    double det; /* will hold the value of a determinant */
-    
-    while (getVal(id, fileID, order, matrix) != 2) {
-        det = computeDet(order, matrix);
-        //TODO: save partial results
+    while (getVal(id, &info) != 2) {
+        info.det = computeDet(info.order, info.matrix);
+        printf("det for file %d matrix %d: %f \n", info.file_id, info.matrix_id, info.det);
+        // TODO: safe in array ordered
     }
-    
+
+    // finalInfo?
 
     statusWorker[id] = EXIT_SUCCESS;
     pthread_exit (&statusWorker[id]);
