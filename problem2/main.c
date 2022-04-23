@@ -79,9 +79,7 @@ double computeDet(int order, double **matrix) {
     // Finding determinant by multiplying
     // elements in principal diagonal elements 
     for (i = 0; i < order; i++)
-    {
         det = det * matrix[i][i];
-    }
 
     return det;
 }
@@ -146,10 +144,6 @@ int main(int argc, char * argv[]) {
         }
     }
     */
-
-    // If the partialInfo class is not empty, store the results in the given file
-    //storeResults();
-    //checkProcessingResults();
 
     clock_gettime (CLOCK_MONOTONIC_RAW, &finish);                                                        /* end of measurement */
 

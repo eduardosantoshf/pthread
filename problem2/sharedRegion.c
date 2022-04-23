@@ -34,7 +34,7 @@ static int numberOfFiles;
 static char **files;
 static FILE *file [15];
 static int currFile = 0;        
-static int currIndex = 0;       // index da matrix
+static int currIndex = 0;
 static bool finishedFiles = false;
 static int c = 0;
 
@@ -51,6 +51,7 @@ void openNextFile() {
     printf("---------------OPENED %s-------------- \n", files[currFile]);
     
     file[currFile] = fopen(files[currFile],"rb");
+
     if (file[currFile] == NULL) {
         printf("Error! File %s not found.\n", files[currFile]);
         exit(1);
@@ -63,7 +64,7 @@ void openNextFile() {
     fread(&nMatrices, sizeof(int), 1, file[currFile]);
     fread(&order, sizeof(int), 1, file[currFile]);
 
-    size = order * order; // working correctly, on a 128 * 128 matrix order = 16 384
+    size = order * order;
     totalMatrices[currFile] = nMatrices;
     finalInfo[currFile] = malloc(sizeof(*finalInfo[0])*nMatrices);
     
