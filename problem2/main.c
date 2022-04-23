@@ -44,7 +44,7 @@ int *statusWorker;
 /** \brief producer life cycle routine */
 static void *worker (void *par);
 
-struct timespec start, finish;                                                                           /* time limits */
+struct timespec start, finish;                                                                                  /* time limits */
 
 double computeDet(int order, double **matrix) {
     double ratio;
@@ -105,13 +105,13 @@ int main(int argc, char * argv[]) {
     if (command_result != EXIT_SUCCESS)
         return command_result;
 
-    clock_gettime (CLOCK_MONOTONIC_RAW, &start);                                                         /* begin of measurement */
+    clock_gettime (CLOCK_MONOTONIC_RAW, &start);                                                       /* begin of measurement */
 
     statusWorker = malloc(sizeof(int)*threads);
 
     pthread_t tIdworker[threads];
     unsigned int workers[threads];
-    int *status_p;                                                                                       /* pointer to execution status */
+    int *status_p;                                                                              /* pointer to execution status */
 
     for (int t = 0; t < threads; t++)
         workers[t] = t;
@@ -121,7 +121,7 @@ int main(int argc, char * argv[]) {
 
     /* --------------- THREADS --------------- */
     for (int t = 0; t < threads; t++){
-        if (pthread_create (&tIdworker[t], NULL, worker, &workers[t]) != 0)                              /* thread producer */
+        if (pthread_create (&tIdworker[t], NULL, worker, &workers[t]) != 0)                                 /* thread producer */
         { 
             perror ("Error on creating thread worker");
             exit (EXIT_FAILURE);
@@ -129,7 +129,7 @@ int main(int argc, char * argv[]) {
     }
     
     for (int t = 0; t < threads; t++){
-        if (pthread_join (tIdworker[t], (void *) &status_p) != 0)                                        /* thread producer */
+        if (pthread_join (tIdworker[t], (void *) &status_p) != 0)                                           /* thread producer */
         { 
             perror ("Error on waiting for thread worker");
             exit (EXIT_FAILURE);
@@ -167,7 +167,6 @@ int main(int argc, char * argv[]) {
  *  \param par pointer to application defined worker identification
  */
 static void *worker (void *par) {
-    //int id = tid;
     unsigned int id = *((unsigned int *) par);
 
     printf("Thread %d created \n", id);

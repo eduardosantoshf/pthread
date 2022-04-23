@@ -72,6 +72,7 @@ void openNextFile() {
         finalInfo[currFile][i].matrix_id = i + 1;
         finalInfo[currFile][i].order = order;
         finalInfo[currFile][i].matrix = malloc(order * sizeof(double *));
+
         for(int ii = 0; ii < order; ii++) {
             finalInfo[currFile][i].matrix[ii] = malloc(order * sizeof(double));
             fread(finalInfo[currFile][i].matrix[ii], sizeof(double), order, file[currFile]);
@@ -93,10 +94,12 @@ void openNextFile() {
 void storeFileNames(int filesNumber, char * fileNames[]) {
     numberOfFiles = filesNumber;                     //number of files
     files = malloc(sizeof(char *)*numberOfFiles);
+
     for (int i = 2; i < 2 + filesNumber; i++){
         files[c] = fileNames[i];
         c++;
     }
+
     finalInfo = malloc(sizeof(*finalInfo)*numberOfFiles);
     totalMatrices = malloc(sizeof(int)*numberOfFiles);
 
@@ -111,24 +114,22 @@ int getVal(int threadID, PartialInfo *info) {
         statusWorker[threadID] = EXIT_FAILURE;
         pthread_exit (&statusWorker[threadID]);
     }
-    
-    // This condition means we have reached the end of the file, so the next point we want to process is
 
     if (totalMatrices[currFile] <= currIndex) {
-        printf("read next file\n");
+        //printf("Read next file\n");
         currFile++;
         openNextFile();
     }
 
     if (numberOfFiles <= currFile){
-        printf("\nAll files read\n");
+        //printf("\nAll files read\n");
         finishedFiles = true;
     }
 
     int status;
     if (!finishedFiles)    //work is not over
     {
-        printf("reading data\n");
+        //printf("reading data\n");
         // Writing to the variables we need to
         (*info) = finalInfo[currFile][currIndex];
         
@@ -136,7 +137,7 @@ int getVal(int threadID, PartialInfo *info) {
         status = 0;
     }
     else {
-        printf("exiting\n");
+        //printf("exiting\n");
         status = 2; // status 2 == endProcess
     }
 
@@ -147,7 +148,7 @@ int getVal(int threadID, PartialInfo *info) {
         statusWorker[threadID] = EXIT_FAILURE;
         pthread_exit (&statusWorker[threadID]);
     }
-    printf("outside lock\n");
+    //printf("outside lock\n");
 
     return status;
 }
