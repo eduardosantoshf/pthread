@@ -28,6 +28,10 @@
 #include <pthread.h>
 #include "probConst.h"
 #include "sharedRegion.h"
+#include "PartialInfo.h"
+
+PartialInfo **finalInfo;
+int *totalMatrices;
 
 /** \brief process the called command. */
 static int process_command(int argc, char *argv[]);
@@ -40,7 +44,7 @@ int *statusWorker;
 /** \brief producer life cycle routine */
 static void *worker (void *par);
 
-
+struct timespec start, finish;                                                                                  /* time limits */
 
 double computeDet(int order, double **matrix) {
     double ratio;
@@ -91,57 +95,65 @@ double computeDet(int order, double **matrix) {
  * In the end, accesses the shared region to obtain the results and stores them in files.
  */
 int main(int argc, char * argv[]) {
-    int threads = 2; //TODO: make this value non-hardcoded
+    int threads = 4; //TODO: make this value non-hardcoded
 
     // will hold the output of processing the command
     int command_result;
-
-    //double t0, t1, t2; /* time limits */
-    //t2 = 0.0;
 
     // process the command and act according to it
     command_result = process_command(argc, argv);
     if (command_result != EXIT_SUCCESS)
         return command_result;
 
+    clock_gettime (CLOCK_MONOTONIC_RAW, &start);                                                       /* begin of measurement */
+
     statusWorker = malloc(sizeof(int)*threads);
 
     pthread_t tIdworker[threads];
     unsigned int workers[threads];
-    int *status_p;                                                                      /* pointer to execution status */
+    int *status_p;                                                                              /* pointer to execution status */
 
     for (int t = 0; t < threads; t++)
         workers[t] = t;
     
-    storeFileNames(argc - 2, argv); // !!!!!! acho que está a dar segmentation fault aqui
+    int numberOfFiles = argc - 2;
+    storeFileNames(numberOfFiles, argv);
 
-    //---------------THREADS
+    /* --------------- THREADS --------------- */
     for (int t = 0; t < threads; t++){
-        //create(t)
-        if (pthread_create (&tIdworker[t], NULL, worker, &workers[t]) != 0)                              /* thread producer */
+        if (pthread_create (&tIdworker[t], NULL, worker, &workers[t]) != 0)                                 /* thread producer */
         { 
-            perror ("error on creating thread worker");
+            perror ("Error on creating thread worker");
             exit (EXIT_FAILURE);
         }
     }
     
     for (int t = 0; t < threads; t++){
-        if (pthread_join (tIdworker[t], (void *) &status_p) != 0)                                       /* thread producer */
+        if (pthread_join (tIdworker[t], (void *) &status_p) != 0)                                           /* thread producer */
         { 
-            perror ("error on waiting for thread worker");
+            perror ("Error on waiting for thread worker");
             exit (EXIT_FAILURE);
         }
         
-        printf ("thread worker, with id %d, has terminated: ", t);
-        printf ("its status was %d\n", *status_p);
+        printf ("Thread worker, with id %d, has terminated: ", t);
+        printf ("Its status was %d\n", *status_p);
     }
+
+    /*
+    for (int i = 0; i < numberOfFiles; i++) {
+        for (int j = 0; j < totalMatrices[i]; j++) {
+            printf("det: %f\n", finalInfo[i][j].det);
+        }
+    }
+    */
 
     // If the partialInfo class is not empty, store the results in the given file
     //storeResults();
     //checkProcessingResults();
 
-    //t1 = ((double) clock ()) / CLOCKS_PER_SEC;
-    //printf ("\nElapsed time = %.6f s\n", t1 - t0);
+    clock_gettime (CLOCK_MONOTONIC_RAW, &finish);                                                        /* end of measurement */
+
+    printf ("\nElapsed time = %.6f s\n",  (finish.tv_sec - start.tv_sec) / 1.0 + (finish.tv_nsec - start.tv_nsec) / 1000000000.0);
 
     return 0;
 
@@ -155,39 +167,23 @@ int main(int argc, char * argv[]) {
  *  \param par pointer to application defined worker identification
  */
 static void *worker (void *par) {
-    //int id = tid;
     unsigned int id = *((unsigned int *) par);
 
     printf("Thread %d created \n", id);
 
-    //double ** matrix;
-    //int order, fileID;
+    PartialInfo info; 
+    // int curr_file;
+    // int curr_matrix;
 
-    //double det; /* will hold the value of a determinant */
-    /*
-    while (getVal(id, &fileID, &order, &matrix) != 2) {
-        det = computeDet(order, matrix);
-        //TODO: save partial results
+    while (getVal(id, &info) != 2) {
+        info.det = computeDet(info.order, info.matrix);
+        printf("det for file %d matrix %d: %f \n", info.file_id, info.matrix_id, info.det);
+        // TODO: safe in array ordered
     }
-    */
-   printf("entrou");
 
     statusWorker[id] = EXIT_SUCCESS;
     pthread_exit (&statusWorker[id]);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * \brief Processes the input command
