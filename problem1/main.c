@@ -19,7 +19,6 @@
 #include <pthread.h>
 #include <math.h>
 #include <time.h>
-
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
@@ -27,6 +26,9 @@
 
 #include "probConst.h"
 #include "shared.h"
+
+/** \brief time limits */
+struct timespec start, finish;
 
 /** \brief Number of files */
 int num_files;
@@ -43,11 +45,11 @@ int *array_num_vowels;
 /** \brief array to save the number of words ending with a consonant for each file */
 int *array_num_cons;
 
-/** \brief consumer threads return status array */
+/** \brief worker threads return status array */
 int statusCons[N];
 
-/** \brief consumer life cycle routine */
-static void *consumer(void *id);
+/** \brief worker life cycle routine */
+static void *worker(void *id);
 
 /** \brief Prints command usage */
 static void printUsage(char *cmdName)
@@ -63,13 +65,13 @@ static void printUsage(char *cmdName)
 /**
  *  \brief Main thread.
  *
- *  Its role is starting the simulation by generating the intervening entities threads (consumers),
+ *  Its role is starting the simulation by generating the intervening entities threads (workers),
  *  waiting for their termination and printing the final results for each file.
  */
 int main(int argc, char *argv[]) {
   
-  pthread_t tIdCons[N];            /* consumers internal thread id array */ /* consumers internal thread id array */
-  unsigned int cons[N];                                          /* consumers application defined thread id array */
+  pthread_t tIdCons[N];                                                       /* workers internal thread id array */
+  unsigned int cons[N];                                            /* workers application defined thread id array */
   filenames = malloc((argc - 1) * sizeof(char *));                /* Allocate the needed memory for the filenames */
 
   int i;                                                                                     /* counting variable */
@@ -132,77 +134,74 @@ int main(int argc, char *argv[]) {
   /* Save number of files */
   num_files = argc - 2;
 
-  /* allocate the needed space in the arrays to save the results*/
+  /* allocate the needed space in the arrays to save the results */
   array_num_words = (int *)malloc(num_files * sizeof(int));
   array_num_vowels = (int *)malloc(num_files * sizeof(int));
   array_num_cons = (int *)malloc(num_files * sizeof(int));
-
-  double t0, t1;                                                                                    /* time limits */
 
   for (i = 0; i < N; i++)
     cons[i] = i;
 
   srandom((unsigned int)getpid());
-  t0 = ((double)clock()) / CLOCKS_PER_SEC;
+  clock_gettime (CLOCK_MONOTONIC_RAW, &start);                                            /* begin of measurement */
 
   /* generation of worker threads */
-
   for (i = 0; i < N; i++)
-    if (pthread_create(&tIdCons[i], NULL, consumer, &cons[i]) != 0){                            /* thread consumer */
-      perror("error on creating thread consumer");
+    if (pthread_create(&tIdCons[i], NULL, worker, &cons[i]) != 0){                             /* thread worker */
+      perror("error on creating thread worker");
       exit(EXIT_FAILURE);
     }
 
-  /* waiting for the termination of the intervening entities threads */
+  /* waiting for the termination of the worker threads */
   for (i = 0; i < N; i++) {
-    if (pthread_join(tIdCons[i], (void *)&status_p) != 0) {                                     /* thread consumer */
+    if (pthread_join(tIdCons[i], (void *)&status_p) != 0) {                                      /* thread worker */
       perror("error on waiting for thread customer");
       exit(EXIT_FAILURE);
     }
 
-    printf("thread consumer, with id %u, has terminated: ", i);
+    printf("thread worker, with id %u, has terminated: ", i);
     printf("its status was %d\n", *status_p);
   }
 
-  t1 = ((double)clock()) / CLOCKS_PER_SEC;
+  printf ("\nFinal report\n\n");
 
-  /* call function to write final results */
-  writeFinal();
+  clock_gettime (CLOCK_MONOTONIC_RAW, &finish);                                             /* end of measurement */
+
+  /* call function to print final results */
+  print_final_results();
 
   /* print time spent */
-  printf("\nElapsed time = %.6f s\n", t1 - t0);
+  printf ("\nElapsed time = %.6f s\n",  (finish.tv_sec - start.tv_sec) / 1.0 + (finish.tv_nsec - start.tv_nsec) / 1000000000.0);
 
   exit(EXIT_SUCCESS);
 }
 
 /**
- *  \brief Function consumer.
+ *  \brief Function worker.
  *
- *  Its role is to simulate the life cycle of a consumer.
+ *  Its role is to simulate the life cycle of a worker.
  *
- *  \param par pointer to application defined consumer identification
+ *  \param par pointer to application defined worker identification
  */
 
-static void *consumer(void *par){
+static void *worker(void *par){
 
-  /* consumer id */
+  /* worker id */
   unsigned int id = *((unsigned int *)par);
 
   /* while there is files to read */
-  while (file_available(id)) {
+  while (check_for_file(id)) {
 
     /* while there is data to read from the current file */
     while (getVal(id)){
       usleep((unsigned int)floor(40.0 * random() / RAND_MAX + 1.5));
     }
-
-    //usleep((unsigned int)floor(40.0 * random() / RAND_MAX + 1.5));
     
     /* saves results for each file in the variables */
-    write_file_results(id);
+    save_file_results(id);
 
     /* close current file */
-    closeFile(id);
+    check_close_file(id);
   }
 
   statusCons[id] = EXIT_SUCCESS;
