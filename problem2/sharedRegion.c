@@ -34,23 +34,26 @@ static int numberOfFiles;
 static char **files;
 static FILE *file [15];
 static int currFile = 0;        
-static int currIndex = 0;       // index da matrix
+static int currIndex = 0;
 static bool finishedFiles = false;
 static int c = 0;
 
 PartialInfo **finalInfo;
 int *totalMatrices;
 
-
-
+/**
+ *  \brief Open next file and process it
+ */
 void openNextFile() {
     currIndex = 0;
 
     if (numberOfFiles <= currFile) return;
 
     printf("---------------OPENED %s-------------- \n", files[currFile]);
+    printf("\n");
     
     file[currFile] = fopen(files[currFile],"rb");
+
     if (file[currFile] == NULL) {
         printf("Error! File %s not found.\n", files[currFile]);
         exit(1);
@@ -63,7 +66,7 @@ void openNextFile() {
     fread(&nMatrices, sizeof(int), 1, file[currFile]);
     fread(&order, sizeof(int), 1, file[currFile]);
 
-    size = order * order; // working correctly, on a 128 * 128 matrix order = 16 384
+    size = order * order;
     totalMatrices[currFile] = nMatrices;
     finalInfo[currFile] = malloc(sizeof(*finalInfo[0])*nMatrices);
     
@@ -91,6 +94,13 @@ void openNextFile() {
     return;
 }
 
+/**
+ *  \brief Store filenames in new array
+ *
+ *  \param filesNumber number of files to be processed
+ *  \param fileNames filenames char array
+ *
+ */
 void storeFileNames(int filesNumber, char * fileNames[]) {
     numberOfFiles = filesNumber;                     //number of files
     files = malloc(sizeof(char *)*numberOfFiles);
@@ -106,6 +116,16 @@ void storeFileNames(int filesNumber, char * fileNames[]) {
     openNextFile();
 }
 
+/**
+ *  \brief Get a value from the data transfer region.
+ *
+ *  Operation carried out by the workers.
+ *
+ *  \param threadID worker ID
+ *  \param info struct with data from each matrix
+ *
+ *  \return status
+ */
 int getVal(int threadID, PartialInfo *info) {
     if ((statusWorker[threadID] = pthread_mutex_lock (&accessCR)) != 0)                                   /* enter monitor */
     { 
@@ -153,6 +173,17 @@ int getVal(int threadID, PartialInfo *info) {
     return status;
 }
 
+/**
+ *  \brief Save partial results
+ *
+ *  Operation carried out by the workers.
+ *
+ *  \param threadID worker ID
+ *  \param fileID file ID
+ *  \param matrixNumber matrix number
+ *  \param det determinant value
+ *
+ */
 void savePartialResults(int threadID, int fileID, int matrixNumber, double det) {
      // Here we need the lock to write partial results from PartialInfo to FinalInfo
     // Only after partial results are saved, that we can save final results
@@ -174,12 +205,4 @@ void savePartialResults(int threadID, int fileID, int matrixNumber, double det) 
         statusWorker[threadID] = EXIT_FAILURE;
         pthread_exit (&statusWorker[threadID]);
     }
-}
-
-void storeResults() {
-
-}
-
-void checkProcessingResults() {
-
 }

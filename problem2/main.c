@@ -46,6 +46,14 @@ static void *worker (void *par);
 
 struct timespec start, finish;                                                                                  /* time limits */
 
+/**
+ * \brief Compute determinant
+ *
+ *  \param order matrix order
+ *  \param matrix matrix array
+ *
+ *  \return matrix's determinant
+ */
 double computeDet(int order, double **matrix) {
     double ratio;
     double det = 1;
@@ -79,9 +87,7 @@ double computeDet(int order, double **matrix) {
     // Finding determinant by multiplying
     // elements in principal diagonal elements 
     for (i = 0; i < order; i++)
-    {
         det = det * matrix[i][i];
-    }
 
     return det;
 }
@@ -95,7 +101,7 @@ double computeDet(int order, double **matrix) {
  * In the end, accesses the shared region to obtain the results and stores them in files.
  */
 int main(int argc, char * argv[]) {
-    int threads = 4; //TODO: make this value non-hardcoded
+    int threads = N;
 
     // will hold the output of processing the command
     int command_result;
@@ -147,10 +153,6 @@ int main(int argc, char * argv[]) {
     }
     */
 
-    // If the partialInfo class is not empty, store the results in the given file
-    //storeResults();
-    //checkProcessingResults();
-
     clock_gettime (CLOCK_MONOTONIC_RAW, &finish);                                                        /* end of measurement */
 
     printf ("\nElapsed time = %.6f s\n",  (finish.tv_sec - start.tv_sec) / 1.0 + (finish.tv_nsec - start.tv_nsec) / 1000000000.0);
@@ -172,13 +174,10 @@ static void *worker (void *par) {
     printf("Thread %d created \n", id);
 
     PartialInfo info; 
-    // int curr_file;
-    // int curr_matrix;
 
     while (getVal(id, &info) != 2) {
         info.det = computeDet(info.order, info.matrix);
-        printf("det for file %d matrix %d: %f \n", info.file_id, info.matrix_id, info.det);
-        // TODO: safe in array ordered
+        printf("det for file %d matrix %d: %.3e \n", info.file_id, info.matrix_id, info.det);
     }
 
     statusWorker[id] = EXIT_SUCCESS;

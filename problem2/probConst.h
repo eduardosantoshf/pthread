@@ -15,9 +15,6 @@
 /* Generic parameters */
 
 /** \brief number of worker*/
-#define  N                                   2
-
-/** \brief number of matrices to be processed by each worker */
-#define  NUMBER_OF_M_TO_PROCESS          16
+#define  N                                   1
 
 #endif /* PROBCONST_H_ */
