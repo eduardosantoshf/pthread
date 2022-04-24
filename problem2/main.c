@@ -93,7 +93,7 @@ double computeDet(int order, double **matrix) {
  * In the end, accesses the shared region to obtain the results and stores them in files.
  */
 int main(int argc, char * argv[]) {
-    int threads = 4; //TODO: make this value non-hardcoded
+    int threads = N;
 
     // will hold the output of processing the command
     int command_result;

@@ -49,6 +49,7 @@ void openNextFile() {
     if (numberOfFiles <= currFile) return;
 
     printf("---------------OPENED %s-------------- \n", files[currFile]);
+    printf("\n");
     
     file[currFile] = fopen(files[currFile],"rb");
 
