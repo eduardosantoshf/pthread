@@ -15,6 +15,6 @@
 /* Generic parameters */
 
 /** \brief number of worker*/
-#define  N                                   8
+#define  N                                   1
 
 #endif /* PROBCONST_H_ */
