@@ -9,7 +9,6 @@
  *     \li add the files to be processed
  *     \li get a piece of data to be processed
  *     \li store the results processed by the workers
- *     \li print the results
  *
  *  \author Eduardo Santos and Pedro Bastos - April 2022
  */

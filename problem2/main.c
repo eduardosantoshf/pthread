@@ -46,6 +46,14 @@ static void *worker (void *par);
 
 struct timespec start, finish;                                                                                  /* time limits */
 
+/**
+ * \brief Compute determinant
+ *
+ *  \param order matrix order
+ *  \param matrix matrix array
+ *
+ *  \return matrix's determinant
+ */
 double computeDet(int order, double **matrix) {
     double ratio;
     double det = 1;
