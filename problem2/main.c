@@ -174,13 +174,10 @@ static void *worker (void *par) {
     printf("Thread %d created \n", id);
 
     PartialInfo info; 
-    // int curr_file;
-    // int curr_matrix;
 
     while (getVal(id, &info) != 2) {
         info.det = computeDet(info.order, info.matrix);
-        printf("det for file %d matrix %d: %f \n", info.file_id, info.matrix_id, info.det);
-        // TODO: safe in array ordered
+        printf("det for file %d matrix %d: %.3e \n", info.file_id, info.matrix_id, info.det);
     }
 
     statusWorker[id] = EXIT_SUCCESS;
